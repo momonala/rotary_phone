@@ -1,0 +1,7 @@
+.DS_Store
+.idea/
+arduino_secrets.h
+audio_files/
+test_audio_player/
+test_dialer/
+test_ringer/
