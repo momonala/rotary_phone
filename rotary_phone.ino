@@ -11,7 +11,7 @@
 //const char* pass = "";
 
 # define RINGER_PIN 0             // phone rings when we write low
-# define BUILTIN_LED_OVERRIDE 2
+# define LED_BUILTIN_OVERRIDE 2
 # define SOFTWARE_SERIAL_RX 4
 # define SOFTWARE_SERIAL_TX 5
 # define NUMBER_PIN 12
@@ -32,6 +32,7 @@ PubSubClient mqttClient(espClient);
 
 // ----------------------------------------------------------
 void mqtt_on_message_callback(char* topic, byte* payload, unsigned int length) {
+  digitalWrite(LED_BUILTIN_OVERRIDE, HIGH);
   // get MQTT message payload, cast to string
   payload[length] = '\0'; // Add a NULL to the end of the char* to make it a string.
   String mqtt_msg = String((char *)payload);  // cast byte array to string (yes, bad for RAM. I dont care.)
@@ -43,24 +44,41 @@ void mqtt_on_message_callback(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  // ring the phone until it gets picked up. If 30s elapse, stop ringing and return.
-  digitalWrite(RINGER_PIN, LOW);
-  unsigned int t0 = millis();
-  while (digitalRead(PHONE_HOOK_PIN)) {
-    if (millis() - t0 > 30000){
-      Serial.println("No pick up :( bye");
-      digitalWrite(RINGER_PIN, HIGH);
-      return;
-    }
-    delay(2);
-  }
-  digitalWrite(RINGER_PIN, HIGH);
+  // ring phone. If its not answered, end the function
+  if (!ring_phone())
+    return;
 
   // start an audio routine
   help_me_im_stuck();
   Serial.println("Exit");
+  digitalWrite(LED_BUILTIN_OVERRIDE, LOW);
 }
 
+// ----------------------------------------------------------
+bool ring_phone() {
+  // ring the phone until it gets picked up. If 30s elapse, stop ringing and return.
+  const unsigned int num_rings = 2;
+  unsigned long start_time;
+  Serial.println("Phone ringing. Waiting...");
+  for (int i = 0; i <= num_rings; i++) {
+    start_time = millis();
+    while (millis() - start_time < 2000) {
+      digitalWrite(RINGER_PIN, LOW);
+      delay(2);
+      if (!digitalRead(PHONE_HOOK_PIN)) {
+        Serial.println("Phone picked up!");
+        digitalWrite(RINGER_PIN, HIGH);
+        return true;
+      }
+    }
+    // ring off
+    digitalWrite(RINGER_PIN, HIGH);
+    delay(4000);
+  }
+  Serial.println("No pick up :( bye");
+  digitalWrite(RINGER_PIN, HIGH);
+  return false;
+}
 // ----------------------------------------------------------
 void help_me_im_stuck() {
   play_helpme_and_wait();
@@ -94,7 +112,7 @@ void wait_for_phone_hook_or_audio_to_finish() {
   }
 
   // break once audio is done or we hang up
-  int is_playing = 0;
+  unsigned int is_playing = 0;
   while (!digitalRead(PHONE_HOOK_PIN)) {
     for (int i = 0; i < 5; i++) {
       is_playing += DFPlayer.isPlaying();
@@ -120,19 +138,20 @@ void setup() {
   setup_MQTT();
   setup_audio_player();
   setup_dialer();
-  Serial.println("Ready for action!");
-    play_startup_tone();
 
   pinMode(RINGER_PIN, OUTPUT);
   digitalWrite(RINGER_PIN, HIGH);
+  pinMode(LED_BUILTIN_OVERRIDE, OUTPUT);
+  digitalWrite(LED_BUILTIN_OVERRIDE, LOW);
+
+  Serial.println("Ready for action!");
+  play_startup_tone();
 }
 
 // ----------------------------------------------------------
 void loop() {
-  if (!mqttClient.connected()) {
+  if (!mqttClient.connected())
     reconnect_mqtt();
-  }
   mqttClient.loop();
-
   delay(10);
 }

@@ -20,10 +20,6 @@ void setup_MQTT() {
   mqttClient.setServer(MQTT_SERVER, 1883);
   mqttClient.setCallback(mqtt_on_message_callback);
   reconnect_mqtt();
-
-  // switch off built-in blue LED
-  pinMode(BUILTIN_LED_OVERRIDE, OUTPUT);
-  digitalWrite(BUILTIN_LED_OVERRIDE, HIGH);
   delay(500);
 }
 

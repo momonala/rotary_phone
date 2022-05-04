@@ -4,34 +4,21 @@
 # define enA 14
 
 # define LISTEN_PIN 5
-# define BUILTIN_LED_OVERRIDE 2
+# define LED_BUILTIN_OVERRIDE 2
 
-
+int pin_val = 1;
 
 void setup() {
-  //  Serial.begin(9600);
+  Serial.begin(9600);
   pinMode(enA, OUTPUT);
   pinMode(en1, OUTPUT);
   pinMode(en2, OUTPUT);
   pinMode(LISTEN_PIN, INPUT_PULLUP);
+  pinMode(LED_BUILTIN_OVERRIDE, OUTPUT);
+  digitalWrite(LED_BUILTIN_OVERRIDE, LOW);
 }
 
-
-void phone_ring() {
-  unsigned long start_time;
-  for (int i = 0; i < 5; i++) {
-    start_time = millis();
-    while (millis() - start_time < 2000) {
-      base_ring();
-      if (digitalRead(LISTEN_PIN))
-        break;
-    }
-    //     ring off
-    delay(4000);
-  }
-}
-
-void base_ring() {
+void ring_constantly() {
   digitalWrite(enA, 255);
   digitalWrite(BUILTIN_LED_OVERRIDE, HIGH);
 
@@ -44,10 +31,12 @@ void base_ring() {
   digitalWrite(en1, LOW);
   digitalWrite(en2, HIGH);
   delay(20);
-  digitalWrite(BUILTIN_LED_OVERRIDE, LOW);
 }
+
+
 
 void loop() {
   if (!digitalRead(LISTEN_PIN))
-    phone_ring();
+    ring_constantly();
+  digitalWrite(LED_BUILTIN_OVERRIDE, LOW);
 }
