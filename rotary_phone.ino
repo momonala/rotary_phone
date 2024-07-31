@@ -10,13 +10,13 @@
 //const char* ssid = "";
 //const char* pass = "";
 
-# define RINGER_PIN 0             // phone rings when we write low
-# define LED_BUILTIN_OVERRIDE 2
-# define SOFTWARE_SERIAL_RX 4
-# define SOFTWARE_SERIAL_TX 5
-# define NUMBER_PIN 12
-# define PHONE_HOOK_PIN 13        // low when phone is lifted
-# define DIALING_PIN 14
+# define RINGER_PIN 0             // pin D3 - phone rings when we write low
+# define LED_BUILTIN_OVERRIDE 2   //
+# define SOFTWARE_SERIAL_RX 4     // pin D2 - serial RX for DFPlayer
+# define SOFTWARE_SERIAL_TX 5     // pin D1 - serial TX for DFPlayer
+# define NUMBER_PIN 12            // pin D6 - reads numbers from the phone dial
+# define PHONE_HOOK_PIN 13        // pin D7 - low when phone is lifted
+# define DIALING_PIN 14           // pin D5 - digital high low if we are dialing or not
 
 // DFPlayer
 SoftwareSerial mySoftwareSerial(SOFTWARE_SERIAL_RX, SOFTWARE_SERIAL_TX);

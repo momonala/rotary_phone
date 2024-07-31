@@ -1,9 +1,9 @@
 // h-bridge outputs
-# define en1 13
-# define en2 12
-# define enA 14
+# define en1 13          // pin D7
+# define en2 12          // pin D6
+# define enA 14          // pin D5
 
-# define LISTEN_PIN 5
+# define LISTEN_PIN 5    // pin D1
 # define LED_BUILTIN_OVERRIDE 2
 
 int pin_val = 1;
