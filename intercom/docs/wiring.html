@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halloween Doorbell Wiring</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Public+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #f6f7f4; --surface: #ffffff; --fg: #1d2420; --muted: #5d6862; --line: #d6dbd5;
+  --pcb: #121212; --pcb-fg: #e8e8e8; --pcb-edge: #3a3a3a; --pcb-part: #2c2c2c;
+  --perf: #2f8f4e; --perf-edge: #58b072; --perf-hole: #c9a24a;
+  --shield: #b9bcc0; --terminal: #2f6fb0;
+  --serial: #2d64a8; --rx: #1f8a4c; --ring: #d9661f; --audio: #b08800; --power: #d32f2f; --button: #8a4fa0; --idle: #8b918d;
+  --wire-green: #2e8b57; --wire-white: #ffffff; --wire-yellow: #e0c020; --wire-brown: #7a4a20;
+  --wire-outline: #7b807c; --gnd: #111111; --warn-bg: #fff4e0; --warn: #c98a00;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131815; --surface: #1b211e; --fg: #e3e9e5; --muted: #9ba7a0; --line: #2f3833; --pcb-edge: #4a4a4a;
+    --serial: #7fb0ec; --rx: #4cc27e; --ring: #ff9a52; --audio: #f2c94c; --power: #ff5252; --button: #cf98e2; --idle: #66706a;
+    --wire-green: #5fd08a; --warn-bg: #2d2414; --warn: #f2c94c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131815; --surface: #1b211e; --fg: #e3e9e5; --muted: #9ba7a0; --line: #2f3833; --pcb-edge: #4a4a4a;
+  --serial: #7fb0ec; --rx: #4cc27e; --ring: #ff9a52; --audio: #f2c94c; --power: #ff5252; --button: #cf98e2; --idle: #66706a;
+  --wire-green: #5fd08a; --warn-bg: #2d2414; --warn: #f2c94c; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; }
+main { max-width: 1000px; margin: 0 auto; padding: 40px 16px 64px; display: grid; gap: 36px; }
+h1, h2 { font-family: var(--display); margin: 0; line-height: 1.15; }
+h1 { font-size: 2rem; } h2 { font-size: 1.25rem; }
+p { margin: 0; max-width: 68ch; }
+code { font-family: var(--mono); font-size: 0.88em; }
+header, section { display: grid; gap: 12px; }
+.lede, .note { color: var(--muted); }
+.note { font-size: 0.88rem; margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.warn { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 6px; padding: 12px 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.85rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid var(--wire-outline); }
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; padding: 12px; }
+.figure svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.figure text { font-family: var(--mono); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 600px; font-size: 0.9rem; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.pin { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; align-content: start; }
+.panel h3 { margin: 0; font-family: var(--display); font-size: 1rem; }
+.panel ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Halloween Doorbell Wiring</h1>
+    <p class="lede">When the intercom rings, an ESP32 hears it through a PC817 optocoupler and has a DFPlayer Mini play a spooky track through a Bluetooth speaker's AUX input. Everything sits on one 7 × 9 cm perfboard.</p>
+    <p class="lede">Sketches in <code>intercom/</code>: <code>intercom_ring</code> is the doorbell; its BOOT button plays a track to check the audio path. <code>ring_capture</code> streams every edge on D23; run <code>uv run intercom/tools/record_ring.py</code> on the Mac to see one line per ring burst, or add <code>-o FILE</code> to save the edges.</p>
+  </header>
+
+  <div class="warn"><b>Use DAC_L, DAC_R and GND for line-out, never SPK1/SPK2.</b> SPK1 and SPK2 are the built-in amplifier's bridged output: neither side is ground, so wiring them to a jack shorts the amp through the cable's sleeve.</div>
+
+  <section>
+    <h2>Vocabulary</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Term</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td class="pin">Main board</td><td>The Ritto 7630 wall unit's circuit board. Connects to the building bus (a, b), the apartment-door button input (ED, ED) and the phone. Has the Einstellen, Lautst. and TÖ buttons.</td></tr>
+          <tr><td class="pin">Phone</td><td>The handset, on a 4-wire cord to the main board. Holds the mic, ear speaker and apartment speaker.</td></tr>
+          <tr><td class="pin">Mic</td><td>Picks up your voice. Yellow–brown, 7.7 kΩ.</td></tr>
+          <tr><td class="pin">Ear speaker</td><td>Plays the door voice into your ear. Wiring not traced yet.</td></tr>
+          <tr><td class="pin">Apartment speaker</td><td>Plays the ring into the room. Green–white, 88 Ω.</td></tr>
+          <tr><td class="pin">TÖ button</td><td>Türöffner: opens the front door.</td></tr>
+          <tr><td class="pin">Our circuit</td><td>The perfboard: ESP32 + DFPlayer + PC817 optocoupler, plus the Bluetooth speaker. Hears the ring through the optocoupler, whose LED the ring signal lights.</td></tr>
+          <tr><td class="pin">Ring signal</td><td>A pulsing tone across the apartment speaker (green–white) while the bell rings: one burst of about 1.5 s per button press, holding 530–740 Hz notes. A multimeter on DC reads it as 15–17 V. The building and apartment doors play different tunes; see below.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Telling the doors apart</h2>
+    <p>Each door plays its own tune on the same green–white pair, identical on every press. Measured with <code>ring_capture</code> on 2026-10-31, three presses per door.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Apartment door</th><th>Building door</th></tr></thead>
+        <tbody>
+          <tr><td class="pin">Tune</td><td>Two notes alternating, 530 ↔ 600 Hz, about 96 ms each. Opens with 95 ms at 510 Hz.</td><td>Three falling notes on repeat, 740 → 600 → 530 Hz, about 43 ms each.</td></tr>
+          <tr><td class="pin">Burst</td><td>1545 ms, 1712 edges, low 22.9 % of the time</td><td>1577 ms, 1944 edges, low 27.1 % of the time</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="note">
+      <li>Only the building tune reaches 740 Hz: one cycle (falling edge to falling edge on D23) takes about 1351 µs, against 1667 µs or more for anything the apartment door plays.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Wiring</h2>
+    <div class="legend" id="legend"></div>
+    <div class="figure"><svg id="board" viewBox="0 0 1110 1210" role="img" aria-label="Perfboard with ESP32, DFPlayer and PC817 optocoupler, wired to an AUX jack and the intercom"></svg></div>
+    <ul class="note">
+      <li>Perfboard and modules drawn to scale (10 px = 1 mm), top view, placed as in the build photo. The jack, speaker and intercom are not to scale.</li>
+      <li>ESP32: 30-pin USB-C devkit lying on its side, USB to the left. VIN…EN run along the top edge, 3V3…D23 along the bottom. Wire by the silkscreen labels.</li>
+      <li>DFPlayer: rotated so the SD slot faces left. SPK2…VCC run along the top edge, IO1…BUSY along the bottom.</li>
+      <li>PC817: drawn with pins 1–2 on top, so the dot (pin 1) is top-right. Pins 1–2 are the LED (intercom side), pins 3–4 the transistor (ESP32 side).</li>
+      <li>Tags with the same name are one connection: 5 V to 5 V, GND to GND. Both DFPlayer GND pins are connected on the board.</li>
+      <li>Dashed box: the existing intercom. The optocoupler is the only link: light crosses between its two halves, no wire does.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Connections</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>From</th><th>To</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="pin">ESP32 VIN</td><td class="pin">DFPlayer VCC</td><td>5 V straight from USB. The DFPlayer's amp is cleaner at 5 V than 3.3 V.</td></tr>
+          <tr><td class="pin">ESP32 GND</td><td class="pin">DFPlayer GND</td><td>Either DFPlayer GND pin.</td></tr>
+          <tr><td class="pin">ESP32 TX2 (GPIO17)</td><td class="pin">DFPlayer RX</td><td>Through 1 kΩ, which cuts serial noise in the audio. All 1 kΩ resistors here are 5-band: brown-black-black-brown-brown.</td></tr>
+          <tr><td class="pin">ESP32 RX2 (GPIO16)</td><td class="pin">DFPlayer TX</td><td>Direct. DFPlayer TX is 3.3 V, safe for the ESP32.</td></tr>
+          <tr><td class="pin">DFPlayer DAC_L</td><td class="pin">Jack tip</td><td>Left line-out.</td></tr>
+          <tr><td class="pin">DFPlayer DAC_R</td><td class="pin">Jack ring</td><td>Right line-out.</td></tr>
+          <tr><td class="pin">DFPlayer GND</td><td class="pin">Jack sleeve</td><td>Top-edge GND, next to SPK2.</td></tr>
+          <tr><td class="pin">Ring + (white wire)</td><td class="pin">2 × 1 kΩ in series → PC817 pin 1 (anode)</td><td>2 kΩ total: about 7 mA at the tone's peaks. Anything from 1.5 to 3.3 kΩ works. In series, not side by side: two in parallel make 500 Ω. Check: about 2 kΩ between the white wire and pin 1.</td></tr>
+          <tr><td class="pin">Ring − (green wire)</td><td class="pin">PC817 pin 2 (cathode)</td><td>Reversed polarity: no ring detected, nothing breaks.</td></tr>
+          <tr><td class="pin">1N4148</td><td class="pin">Across pins 1 and 2</td><td>Stripe on pin 1. Shields the LED from the negative swings of the ring tone (it tolerates only about 6 V in reverse).</td></tr>
+          <tr><td class="pin">PC817 pin 4 (collector)</td><td class="pin">ESP32 D23 (GPIO23)</td><td><code>INPUT_PULLUP</code>; pulses low with the ring tone, which the sketch bridges into one signal. Not a strapping pin.</td></tr>
+          <tr><td class="pin">PC817 pin 3 (emitter)</td><td class="pin">ESP32 GND</td><td>Never connect ESP32 GND to the green wire.</td></tr>
+          <tr><td class="pin">DFPlayer SPK1, SPK2</td><td class="pin">Nothing</td><td>Leave unconnected.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="cols">
+      <div class="panel">
+        <h3>SD card and behaviour</h3>
+        <ul>
+          <li>Card <code>16SCOPE</code>, folder <code>/01/</code>: <code>001_scream</code>, <code>002_very_superstitious</code>, <code>003_seven_years_bad_luck</code>, <code>004_this_is_halloween</code>, <code>005_witch</code>, <code>006_circus</code> (all <code>.mp3</code>). Repo copy: <code>intercom/media/01/</code>.</li>
+          <li>Each ring plays a random track from that door's list in the sketch. The on-board BOOT button (GPIO0) plays one from either list, and power-up plays 005 to confirm the audio path.</li>
+          <li>The on-board blue LED (GPIO2) is on while a ring signal is seen: steady through each 1.5 s burst, off in the gaps. The red LED is power and always on.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Gotchas</h3>
+        <ul>
+          <li>GPIO6–11 belong to the flash chip; never use them. GPIO16/17 are free on a WROOM-32D (only WROVER boards use them for PSRAM).</li>
+          <li>If init prints dots forever: swap RX/TX first, then check the card is FAT32.</li>
+          <li>Many Bluetooth speakers switch off after 10–30 min of silence, and some need a button press to select AUX. Check before Halloween.</li>
+          <li>Hum or buzz: the ESP32 and speaker share a charger. Use separate ones.</li>
+          <li>BOOT plays but the doorbell doesn't: flash <code>ring_capture</code>, run <code>uv run intercom/tools/record_ring.py</code> and press the bell. Only <code>idle … low samples 0</code> lines means nothing reaches the optocoupler: check the cable and joints to the green–white pair first (a bad cable was the cause once), then polarity. One line per press like <code>burst at 3.20 s: 1545 ms, 1712 edges</code> means detection works; 1712 edges is the apartment door, 1944 the building door.</li>
+          <li>Wrong door detected: record both doors with <code>-o</code> and compare against the table above.</li>
+          <li>Flashing: <code>rotary_phone/tools/flash.sh</code> targets the rotary phone's D1 Mini, not this ESP32. Use <code>arduino-cli upload --fqbn esp32:esp32:esp32:UploadSpeed=115200 -p /dev/cu.usbserial-10 intercom/intercom_ring</code>; at the default 921600 baud the chip stops responding mid-upload.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const GROUPS = {
+  serial: { label: "TX2 → DFPlayer RX", color: "var(--serial)" },
+  rx:     { label: "DFPlayer TX → RX2", color: "var(--rx)" },
+  audio:  { label: "Line out (to jack)", color: "var(--audio)" },
+  ring:   { label: "Ring detect (optocoupler)", color: "var(--ring)" },
+  power:  { label: "5 V", color: "var(--power)" },
+  gnd:    { label: "Ground", color: "var(--gnd)" },
+  button: { label: "On-board button", color: "var(--button)" },
+  idle:   { label: "Unused", color: "var(--idle)" },
+};
+
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("board");
+const layers = { boards: el("g", {}), wires: el("g", {}), pins: el("g", {}) };
+svg.append(layers.boards, layers.wires, layers.pins);
+
+function el(tag, attrs, str) {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (str != null) n.textContent = str;
+  return n;
+}
+
+function text(layer, x, y, str, { anchor = "middle", size = 11, color = "var(--pcb-fg)", weight = 400 } = {}) {
+  layers[layer].append(el("text", { x, y, "text-anchor": anchor, "font-size": size, "font-weight": weight, style: `fill: ${color}` }, str));
+}
+
+function rect(x, y, w, h, style, rx = 3, layer = "boards") {
+  layers[layer].append(el("rect", { x, y, width: w, height: h, rx, style }));
+}
+
+function part(x, y, w, h, fill = "var(--pcb-part)") {
+  rect(x, y, w, h, `fill: ${fill}`);
+}
+
+function pin(x, y, group) {
+  const color = group ? GROUPS[group].color : null;
+  layers.pins.append(el("circle", { cx: x, cy: y, r: 5, style: color ? `fill: ${color}; stroke: ${group === "gnd" ? "var(--wire-outline)" : color}` : "fill: var(--pcb); stroke: var(--idle)" }));
+}
+
+function pinLabel(x, y, label, group, size = 8) {
+  text("pins", x, y, label, { size, weight: group ? 600 : 400, color: group ? "var(--pcb-fg)" : "var(--idle)" });
+}
+
+const OUTLINED = ["var(--wire-white)", "var(--gnd)"];
+
+function wire(points, color) {
+  const base = { points: points.map(p => p.join(",")).join(" "), fill: "none", "stroke-linejoin": "round", "stroke-linecap": "round" };
+  layers.wires.append(el("polyline", { ...base, "stroke-width": 7, style: "stroke: var(--surface)" }));
+  if (OUTLINED.includes(color)) layers.wires.append(el("polyline", { ...base, "stroke-width": 4.5, style: "stroke: var(--wire-outline)" }));
+  layers.wires.append(el("polyline", { ...base, "stroke-width": 2.5, style: `stroke: ${color}` }));
+}
+
+function tag(x, y, str, anchor = "middle") {
+  const w = str.length * 6.2 + 12;
+  const left = anchor === "start" ? x : anchor === "end" ? x - w : x - w / 2;
+  const gnd = str === "GND";
+  rect(left, y - 8, w, 16, gnd ? "fill: var(--gnd); stroke: var(--wire-outline)" : "fill: var(--power)", 8, "pins");
+  text("pins", left + w / 2, y + 3.5, str, { size: 10, weight: 600, color: gnd ? "#ffffff" : "var(--surface)" });
+}
+
+const ONE_K_BANDS = ["#7a4a20", "#111111", "#111111", "#7a4a20", "#7a4a20"];
+function resistor(x, y, label, color, vertical = false) {
+  const fg = OUTLINED.includes(color) ? "var(--wire-outline)" : color;
+  const [w, h] = vertical ? [12, 30] : [30, 12];
+  rect(x - w / 2, y - h / 2, w, h, `fill: #e8d8b0; stroke: ${fg}; stroke-width: 2`, 2, "wires");
+  ONE_K_BANDS.forEach((band, i) => {
+    const offset = -10 + i * 4 + (i === 4 ? 3 : 0);
+    if (vertical) rect(x - w / 2 + 1, y + offset - 1, w - 2, 2.5, `fill: ${band}`, 0, "wires");
+    else rect(x + offset - 1, y - h / 2 + 1, 2.5, h - 2, `fill: ${band}`, 0, "wires");
+  });
+  if (vertical) label.forEach((line, i) => text("wires", x + 10, y - 2 + i * 13, line, { size: 10, anchor: "start", color: fg }));
+  else text("wires", x, y - 12, label[0], { size: 10, color: fg });
+}
+
+function junction(x, y) {
+  layers.pins.append(el("circle", { cx: x, cy: y, r: 4, style: "fill: var(--fg)" }));
+}
+
+const PITCH = 25.4;
+
+const PERF = { x: 60, y: 60, w: 900, h: 700 };
+
+const ESP = { x: 60, y: 150, w: 520, h: 300 };
+const espX = i => ESP.x + 82.2 + i * PITCH;
+const ESP_TOP_Y = ESP.y + 14, ESP_BOT_Y = ESP.y + ESP.h - 14;
+const ESP_TOP = [
+  ["VIN", "power"], ["GND", "gnd"], ["D13"], ["D12"], ["D14"], ["D27"], ["D26"], ["D25"],
+  ["D33"], ["D32"], ["D35"], ["D34"], ["VN"], ["VP"], ["EN"],
+];
+const ESP_BOTTOM = [
+  ["3V3"], ["GND"], ["D15"], ["D2"], ["D4"], ["RX2", "rx"], ["TX2", "serial"], ["D5"],
+  ["D18"], ["D19"], ["D21"], ["RX0"], ["TX0"], ["D22"], ["D23", "ring"],
+];
+
+const DFP = { x: 131.1, y: 520, w: 200, h: 200 };
+const dfpX = i => DFP.x + 11.1 + i * PITCH;
+const DFP_TOP_Y = DFP.y + 13, DFP_BOT_Y = DFP.y + DFP.h - 13;
+const DFP_TOP = [["SPK2"], ["GND", "gnd"], ["SPK1"], ["DAC_L", "audio"], ["DAC_R", "audio"], ["TX", "rx"], ["RX", "serial"], ["VCC", "power"]];
+const DFP_BOTTOM = [["IO1"], ["GND", "gnd"], ["IO2"], ["AD1"], ["AD2"], ["USB+"], ["USB-"], ["BUSY"]];
+
+const OPTO = { x: 800, y: 150, w: 76, h: 64 };
+const OPTO_L = OPTO.x + 18, OPTO_R = OPTO.x + OPTO.w - 18;
+
+const JACK = { x: 0, y: 790, w: 110, h: 80 };
+const SPEAKER = { x: 0, y: 910, w: 130, h: 170 };
+
+const INTERCOM = { x: 170, y: 845, w: 930, h: 355 };
+const MB = { x: 330, y: 905, w: 260, h: 250 };
+const PH = { x: 760, y: 895, w: 330, h: 270 };
+const CORD = { white: MB.y + 50, green: MB.y + 74, yellow: MB.y + 150, brown: MB.y + 174 };
+
+function drawPerfboard() {
+  rect(PERF.x, PERF.y, PERF.w, PERF.h, "fill: var(--perf); stroke: var(--perf-edge)", 10);
+  for (let x = PERF.x + 20; x < PERF.x + PERF.w - 10; x += PITCH)
+    for (let y = PERF.y + 20; y < PERF.y + PERF.h - 10; y += PITCH)
+      layers.boards.append(el("circle", { cx: x, cy: y, r: 3.2, style: "fill: var(--perf-hole); opacity: 0.55" }));
+  text("boards", PERF.x + PERF.w / 2, PERF.y + PERF.h - 8, "7 × 9 cm perfboard", { size: 10, color: "#e8f5ec" });
+}
+
+function drawESP32() {
+  rect(ESP.x, ESP.y, ESP.w, ESP.h, "fill: var(--pcb); stroke: var(--pcb-edge)", 8);
+  part(ESP.x - 14, ESP.y + 110, 44, 80, "#9a9ea3");
+  text("boards", ESP.x + 46, ESP.y + 154, "USB-C", { size: 9, anchor: "start" });
+  const button = (bx, by, label, color) => {
+    part(bx - 13, by - 13, 26, 26);
+    layers.boards.append(el("circle", { cx: bx, cy: by, r: 7, style: `fill: ${color}` }));
+    text("boards", bx + 18, by + 4, label, { size: 9, anchor: "start", weight: 600, color });
+  };
+  button(ESP.x + 40, ESP.y + 60, "EN", "var(--idle)");
+  button(ESP.x + 40, ESP.y + 240, "BOOT", "var(--button)");
+  part(ESP.x + 120, ESP.y + 110, 90, 60);
+  text("boards", ESP.x + 165, ESP.y + 144, "USB-serial", { size: 8 });
+  rect(ESP.x + 260, ESP.y + 50, 180, 200, "fill: var(--shield)", 3);
+  text("boards", ESP.x + 350, ESP.y + 145, "ESP32-WROOM-32D", { size: 11, weight: 600, color: "#222" });
+  text("boards", ESP.x + 350, ESP.y + 162, "shield", { size: 9, color: "#555" });
+  part(ESP.x + 440, ESP.y + 50, 60, 200);
+  for (let i = 0; i < 6; i++) rect(ESP.x + 448, ESP.y + 66 + i * 28, 44, 12, "fill: none; stroke: var(--pcb-fg); stroke-opacity: 0.35", 0);
+  text("boards", ESP.x + 470, ESP.y + 240, "antenna", { size: 9, color: "var(--idle)" });
+
+  ESP_TOP.forEach(([name, group], i) => { pin(espX(i), ESP_TOP_Y, group); pinLabel(espX(i), ESP_TOP_Y + 22, name, group); });
+  ESP_BOTTOM.forEach(([name, group], i) => { pin(espX(i), ESP_BOT_Y, group); pinLabel(espX(i), ESP_BOT_Y - 13, name, group); });
+}
+
+function drawDFPlayer() {
+  rect(DFP.x, DFP.y, DFP.w, DFP.h, "fill: var(--pcb); stroke: var(--pcb-edge)", 6);
+  part(DFP.x - 18, DFP.y + 40, 120, 120, "#3a3a3a");
+  text("boards", DFP.x + 42, DFP.y + 96, "microSD", { size: 9 });
+  text("boards", DFP.x + 42, DFP.y + 110, "← card in", { size: 9, color: "var(--idle)" });
+  text("boards", DFP.x + 150, DFP.y + 96, "DFPlayer", { size: 11, weight: 600 });
+  text("boards", DFP.x + 150, DFP.y + 110, "Mini", { size: 11, weight: 600 });
+  DFP_TOP.forEach(([name, group], i) => { pin(dfpX(i), DFP_TOP_Y, group); pinLabel(dfpX(i), DFP_TOP_Y + 20, name, group, 7); });
+  DFP_BOTTOM.forEach(([name, group], i) => { pin(dfpX(i), DFP_BOT_Y, group); pinLabel(dfpX(i), DFP_BOT_Y - 11, name, group, 7); });
+}
+
+function drawOpto() {
+  rect(OPTO.x, OPTO.y, OPTO.w, OPTO.h, "fill: #222; stroke: #444", 4);
+  layers.boards.append(el("circle", { cx: OPTO.x + OPTO.w - 12, cy: OPTO.y + 12, r: 4, style: "fill: #555" }));
+  text("boards", OPTO.x + OPTO.w / 2, OPTO.y + 33, "PC817", { size: 10, weight: 600 });
+  text("boards", OPTO.x + OPTO.w / 2, OPTO.y + 47, "C", { size: 9, color: "var(--idle)" });
+  [[OPTO_L, OPTO.y, "2", "ring", -1], [OPTO_R, OPTO.y, "1", "ring", -1], [OPTO_L, OPTO.y + OPTO.h, "3", "gnd", 1], [OPTO_R, OPTO.y + OPTO.h, "4", "ring", 1]]
+    .forEach(([x, y, n, group, dir]) => { pin(x, y, group); text("pins", x + 9, y + (dir < 0 ? -6 : 14), n, { size: 9, weight: 600, anchor: "start", color: "#e8f5ec" }); });
+}
+
+function diode(x1, x2, y, label) {
+  const mid = (x1 + x2) / 2;
+  rect(mid - 13, y - 6, 26, 12, "fill: #1c1c1c; stroke: #555", 3, "wires");
+  rect(mid + 6, y - 6, 4, 12, "fill: #f2f2f2", 0, "wires");
+  text("wires", x1 - 10, y - 2, label, { size: 10, weight: 600, anchor: "end", color: "#e8f5ec" });
+  text("wires", x1 - 10, y + 11, "stripe → pin 1", { size: 8, anchor: "end", color: "#e8f5ec" });
+}
+
+function drawJack() {
+  const { x, y, w, h } = JACK;
+  rect(x, y, w, h, "fill: var(--pcb); stroke: var(--pcb-edge)", 6);
+  text("boards", x + w / 2, y + h - 10, "3.5 mm jack", { size: 9, weight: 600 });
+  [["R", "audio"], ["T", "audio"], ["S", "gnd"]].forEach(([name, group], i) => { pin(x + 20 + i * 30, y + 12, group); text("pins", x + 20 + i * 30, y + 34, name, { size: 9, weight: 600 }); });
+}
+
+function drawSpeaker() {
+  const { x, y, w, h } = SPEAKER;
+  rect(x, y, w, h, "fill: var(--surface); stroke: var(--muted); stroke-width: 1.5", 14);
+  layers.boards.append(el("circle", { cx: x + w / 2, cy: y + 62, r: 34, style: "fill: none; stroke: var(--muted); stroke-width: 1.5" }));
+  layers.boards.append(el("circle", { cx: x + w / 2, cy: y + 62, r: 14, style: "fill: none; stroke: var(--muted)" }));
+  text("boards", x + w / 2, y + 122, "Bluetooth", { size: 11, weight: 600, color: "var(--fg)" });
+  text("boards", x + w / 2, y + 137, "speaker", { size: 11, weight: 600, color: "var(--fg)" });
+  text("boards", x + w / 2, y + 155, "AUX in", { size: 10, color: "var(--muted)" });
+  wire([[JACK.x + JACK.w / 2, JACK.y + JACK.h], [JACK.x + JACK.w / 2, SPEAKER.y]], "var(--gnd)");
+}
+
+function drawIntercom() {
+  rect(INTERCOM.x, INTERCOM.y, INTERCOM.w, INTERCOM.h, "fill: none; stroke: var(--muted); stroke-dasharray: 6 4", 12);
+  text("boards", INTERCOM.x + 12, INTERCOM.y + 18, "EXISTING INTERCOM (only the optocoupler connects to it)", { size: 10, anchor: "start", color: "var(--muted)" });
+
+  rect(MB.x, MB.y, MB.w, MB.h, "fill: var(--pcb); stroke: var(--pcb-edge)", 8);
+  text("boards", MB.x + MB.w / 2, MB.y - 10, "Main board (Ritto 7630 wall unit)", { size: 12, weight: 600, color: "var(--fg)" });
+  part(MB.x + 90, MB.y + 30, 80, 60);
+  text("boards", MB.x + 130, MB.y + 64, "Ritto MCU", { size: 9 });
+  [["Einstellen", "pairing", "var(--idle)"], ["Lautst.", "volume", "var(--idle)"], ["TÖ", "door opener", "var(--button)"]].forEach(([name, what, color], i) => {
+    const by = MB.y + 130 + i * 38;
+    part(MB.x + 90, by - 13, 26, 26);
+    layers.boards.append(el("circle", { cx: MB.x + 103, cy: by, r: 7, style: `fill: ${color}` }));
+    text("boards", MB.x + 124, by + 4, `${name}: ${what}`, { size: 10, anchor: "start" });
+  });
+  ["a", "b", "ED", "ED"].forEach((name, i) => {
+    const ty = MB.y + 40 + i * 30;
+    pin(MB.x + 14, ty, null);
+    text("pins", MB.x + 26, ty + 4, name, { size: 10, anchor: "start", color: "var(--idle)" });
+    wire([[MB.x + 14, ty], [MB.x - 40, ty]], "var(--idle)");
+  });
+  text("wires", MB.x - 46, MB.y + 59, "building bus", { size: 10, anchor: "end", color: "var(--muted)" });
+  text("wires", MB.x - 46, MB.y + 119, "apartment-door", { size: 10, anchor: "end", color: "var(--muted)" });
+  text("wires", MB.x - 46, MB.y + 132, "bell button", { size: 10, anchor: "end", color: "var(--muted)" });
+
+  rect(PH.x, PH.y, PH.w, PH.h, "fill: var(--surface); stroke: var(--muted); stroke-width: 1.5", 22);
+  text("boards", PH.x + PH.w / 2, PH.y - 10, "Phone (handset)", { size: 12, weight: 600, color: "var(--fg)" });
+
+  const plugX = MB.x + MB.w - 14;
+  [["white", "var(--wire-white)", CORD.white], ["green", "var(--wire-green)", CORD.green],
+   ["yellow", "var(--wire-yellow)", CORD.yellow], ["brown", "var(--wire-brown)", CORD.brown]].forEach(([name, color, y]) => {
+    pin(plugX, y, null);
+    wire([[plugX, y], [PH.x + 108, y]], color);
+    text("wires", 720, y - 6, name, { size: 9, color: "var(--muted)" });
+  });
+  text("boards", plugX - 12, MB.y + 112, "phone plug", { size: 9, anchor: "end", color: "var(--idle)" });
+
+  const transducer = (cx, cy, label, sub, dashed) => {
+    const style = `fill: var(--surface); stroke: ${dashed ? "var(--idle)" : "var(--fg)"}; stroke-width: 1.5${dashed ? "; stroke-dasharray: 4 3" : ""}`;
+    layers.pins.append(el("circle", { cx, cy, r: 22, style }));
+    layers.pins.append(el("circle", { cx, cy, r: 9, style }));
+    text("pins", cx + 32, cy - 2, label, { size: 11, weight: 600, anchor: "start", color: "var(--fg)" });
+    text("pins", cx + 32, cy + 13, sub, { size: 9, anchor: "start", color: "var(--muted)" });
+  };
+  transducer(PH.x + 130, MB.y + 62, "Apartment speaker", "ring · green–white · 88 Ω");
+  transducer(PH.x + 130, MB.y + 162, "Mic", "yellow–brown · 7.7 kΩ");
+  transducer(PH.x + 130, MB.y + 232, "Ear speaker", "door voice · not traced", true);
+  wire([[PH.x + 108, MB.y + 232], [PH.x + 50, MB.y + 232], [PH.x + 50, MB.y + 190]], "var(--idle)");
+  text("wires", PH.x + 44, MB.y + 214, "?", { size: 14, weight: 600, anchor: "end", color: "var(--idle)" });
+}
+
+function drawWires() {
+  const tx2 = espX(6), rx2 = espX(5);
+  wire([[tx2, ESP_BOT_Y], [tx2, DFP_TOP_Y]], "var(--serial)");
+  resistor(tx2, 470, ["1 kΩ"], "var(--serial)", true);
+  wire([[rx2, ESP_BOT_Y], [rx2, DFP_TOP_Y]], "var(--rx)");
+
+  wire([[espX(0), ESP_TOP_Y], [espX(0), 122]], "var(--power)"); tag(espX(0), 114, "5 V");
+  wire([[espX(1), ESP_TOP_Y], [espX(1), 98]], "var(--gnd)"); tag(espX(1), 90, "GND");
+  wire([[dfpX(7), DFP_TOP_Y], [dfpX(7), 520], [362, 520]], "var(--power)"); tag(364, 520, "5 V", "start");
+  wire([[dfpX(1), DFP_BOT_Y], [dfpX(1), 742]], "var(--gnd)"); tag(dfpX(1), 750, "GND");
+
+  wire([[dfpX(1), DFP_TOP_Y], [dfpX(1), 515], [48, 515], [48, 770], [JACK.x + 80, 770], [JACK.x + 80, JACK.y + 12]], "var(--gnd)");
+  wire([[dfpX(3), DFP_TOP_Y], [dfpX(3), 505], [34, 505], [34, 780], [JACK.x + 50, 780], [JACK.x + 50, JACK.y + 12]], "var(--audio)");
+  wire([[dfpX(4), DFP_TOP_Y], [dfpX(4), 495], [20, 495], [20, JACK.y + 12]], "var(--audio)");
+
+
+  const top = OPTO.y, bottom = OPTO.y + OPTO.h;
+  wire([[espX(14), ESP_BOT_Y], [espX(14), 480], [OPTO_R, 480], [OPTO_R, bottom]], "var(--ring)");
+  wire([[OPTO_L, bottom], [OPTO_L, 238]], "var(--gnd)"); tag(OPTO_L, 246, "GND");
+
+  wire([[OPTO_L, top], [OPTO_L, 26], [1000, 26], [1000, 835], [650, 835], [650, CORD.green]], "var(--wire-green)");
+  wire([[OPTO_R, top], [OPTO_R, 95], [945, 95], [945, 42], [980, 42], [980, 820], [670, 820], [670, CORD.white]], "var(--wire-white)");
+  resistor(885, 95, [""], "var(--wire-white)");
+  resistor(920, 95, [""], "var(--wire-white)");
+  text("wires", 937, 80, "2 × 1 kΩ in series", { size: 10, weight: 600, anchor: "end", color: "#e8f5ec" });
+  wire([[OPTO_L, 125], [OPTO_R, 125]], "var(--idle)");
+  diode(OPTO_L, OPTO_R, 125, "1N4148");
+  junction(OPTO_L, 125);
+  junction(OPTO_R, 125);
+  junction(670, CORD.white);
+  junction(650, CORD.green);
+  text("wires", 1006, 692, "white = ring +", { size: 10, anchor: "start", color: "var(--muted)" });
+  text("wires", 1006, 706, "green = ring −", { size: 10, anchor: "start", color: "var(--wire-green)" });
+}
+
+function fillLegend() {
+  const legend = document.getElementById("legend");
+  for (const g of Object.values(GROUPS)) {
+    const s = document.createElement("span");
+    s.innerHTML = `<i class="dot" style="background:${g.color}"></i>${g.label}`;
+    legend.append(s);
+  }
+}
+
+fillLegend();
+drawPerfboard();
+drawESP32();
+drawDFPlayer();
+drawOpto();
+drawJack();
+drawSpeaker();
+drawIntercom();
+drawWires();
+</script>
+</body>
+</html>
