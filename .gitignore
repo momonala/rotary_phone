@@ -1,7 +1,12 @@
 .DS_Store
 .idea/
-arduino_secrets.h
-audio_files/
-test_audio_player/
-test_dialer/
-test_ringer/
+media/
+test*
+
+!tests/
+!tests/**
+!test-and-lint.sh
+__pycache__/
+.venv/
+.pytest_cache/
+.coverage

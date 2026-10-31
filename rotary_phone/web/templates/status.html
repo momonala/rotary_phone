@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e8ebed">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <title>Phone Status</title>
+</head>
+<body>
+  <main>
+    <header class="page-head">
+      <h1>Status</h1>
+      <a href="/">Remote</a>
+    </header>
+
+    <h2>Phone</h2>
+    <ul id="phone"></ul>
+
+    <h2>Peripherals</h2>
+    <ul id="peripherals"></ul>
+
+    <h2>Bell test</h2>
+    <ul class="actions">
+      {% for action in bell_tests %}
+      <li>
+        <button type="button" data-action="{{ action.id }}">
+          <span class="label">{{ action.label }}</span>
+          <span class="key">{% include "icons/" ~ action.icon ~ ".svg" %}</span>
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <h2>Server</h2>
+    <ul id="server"></ul>
+
+    <h2>Recent events</h2>
+    <ul id="events"></ul>
+  </main>
+  <div class="toast-anchor">
+    <div class="toast t-toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script>
+    const REFRESH_MS = 3000;
+    const HEARTBEAT_STALE_S = 75;
+
+    function duration(seconds) {
+      if (seconds === null || seconds === undefined) return "never";
+      if (seconds < 60) return `${seconds} s`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes} min`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 48) return `${hours} h ${minutes % 60} min`;
+      return `${Math.floor(hours / 24)} d ${hours % 24} h`;
+    }
+
+    function signal(rssi) {
+      const quality = rssi >= -60 ? "good" : rssi >= -70 ? "fair" : "weak";
+      return { text: `${rssi} dBm, ${quality}`, bad: quality === "weak" };
+    }
+
+    function render(list, rows) {
+      list.replaceChildren(
+        ...rows.map(([key, value, bad]) => {
+          const li = document.createElement("li");
+          li.className = "row";
+          const keyEl = document.createElement("span");
+          keyEl.className = "key";
+          keyEl.textContent = key;
+          const valueEl = document.createElement("span");
+          valueEl.className = bad ? "value bad" : "value";
+          valueEl.textContent = value;
+          li.append(keyEl, valueEl);
+          return li;
+        }),
+      );
+    }
+
+    function renderEvents(list, events) {
+      if (!events.length) {
+        const li = document.createElement("li");
+        li.className = "row empty";
+        li.textContent = "Nothing since the server started";
+        list.replaceChildren(li);
+        return;
+      }
+      list.replaceChildren(
+        ...events.map((event) => {
+          const li = document.createElement("li");
+          li.className = "row";
+          const time = document.createElement("span");
+          time.className = "time";
+          time.textContent = new Date(event.at * 1000).toLocaleTimeString([], { hour12: false });
+          const text = document.createElement("span");
+          text.className = "event";
+          text.textContent = event.text;
+          li.append(time, text);
+          return li;
+        }),
+      );
+    }
+
+    async function refresh() {
+      let data;
+      try {
+        const response = await fetch("/api/status");
+        data = await response.json();
+      } catch {
+        render(document.getElementById("server"), [["Web server", "Unreachable", true]]);
+        return;
+      }
+      const phone = data.phone;
+      const health = phone.health;
+      const online = phone.availability === "online";
+      const stale = phone.health_age_s === null || phone.health_age_s > HEARTBEAT_STALE_S;
+
+      const phoneRows = [
+        ["Connection", phone.availability === null ? "Unknown" : online ? "Online" : "Offline", !online],
+        ["Last report", `${duration(phone.health_age_s)} ago`, online && stale],
+      ];
+      if (health) {
+        const wifi = signal(health.wifi_rssi);
+        phoneRows.push(
+          ["Uptime", duration(health.uptime_s)],
+          ["WiFi signal", wifi.text, wifi.bad],
+          ["IP address", health.ip],
+          ["Free memory", `${(health.free_heap / 1024).toFixed(1)} KB`, health.free_heap < 8192],
+          ["Last reset", health.reset_reason],
+          ["MQTT connections", String(health.mqtt_connects), health.mqtt_connects > 1],
+          ["Firmware built", health.build],
+        );
+      }
+      render(document.getElementById("phone"), phoneRows);
+
+      const peripherals = health
+        ? [
+            [
+              "DFPlayer",
+              health.dfplayer_volume >= 0
+                ? `Responding, volume ${health.dfplayer_volume} of 30, ${health.dfplayer_tracks} tracks`
+                : "Not responding",
+              health.dfplayer_volume < 0,
+            ],
+            ["Firmware volume", `calls ${health.call_volume}, sounds ${health.sound_volume}, ring ${health.ring_volume} of 30`],
+            ["Hook", health.hook_lifted ? "Lifted" : "On hook"],
+            ["Dial", health.dial_turning ? "Turning" : "At rest"],
+            ["Bell", "Not monitored"],
+          ]
+        : [["Peripherals", "No report from the phone yet", true]];
+      render(document.getElementById("peripherals"), peripherals);
+
+      render(document.getElementById("server"), [
+        ["MQTT broker", phone.broker_connected ? "Connected" : "Disconnected", !phone.broker_connected],
+        ["Web app uptime", duration(data.server_uptime_s)],
+      ]);
+      renderEvents(document.getElementById("events"), data.events);
+    }
+
+    refresh();
+    setInterval(() => {
+      if (!document.hidden) refresh();
+    }, REFRESH_MS);
+  </script>
+</body>
+</html>

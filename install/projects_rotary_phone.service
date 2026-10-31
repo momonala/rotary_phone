@@ -1,0 +1,14 @@
+[Unit]
+Description=Rotary phone web remote
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/home/mnalavadi/rotary_phone
+Type=idle
+ExecStart=/home/mnalavadi/.local/bin/uv run app
+Restart=on-failure
+User=mnalavadi
+
+[Install]
+WantedBy=multi-user.target

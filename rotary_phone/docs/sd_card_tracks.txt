@@ -1,0 +1,24 @@
+SD card (volume PHONE), folder 01. DFPlayer plays /01/NNN.mp3 via playFolder(1, NNN); only the number prefix matters.
+Listed 2026-10-24.
+
+000_the_wireless_customer_you_are.mp3
+001_welcome_to_verizon_were_sorry.mp3
+002_unfortuantely_the_system_cannot_process.mp3
+003_hello_and_please_listen_carefully.mp3
+004_welcome_to_verizonwireless_while_romating.mp3
+005_the_service_you_are_attempting_to_use.mp3
+006_if_this_is_an_emergency.mp3
+007_sorry_your_account_has_no_access.mp3
+008_the_magic_jack_customer.mp3
+009_im_sorry_the_person_youre_trying_to_reach.mp3
+010_your_account_has_a_zero_balance.mp3
+011_just_for_calling_in_today.mp3
+012_beep_beep_beep.mp3
+013_Fax machine sound effect.mp3
+014_r2d2_sound.mp3
+030_Rick Astley - Never Gonna Give You Up.mp3
+031_0118 999 881 999 119 7253 _ The IT Crowd.mp3
+032_8675309 Jenny Jenny.mp3
+033_Taken Phone Speech.mp3
+098_Microsoft Windows XP Startup Sound.mp3
+099_help_im_stuck.mp3

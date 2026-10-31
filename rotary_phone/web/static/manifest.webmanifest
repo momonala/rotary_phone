@@ -1,0 +1,9 @@
+{
+  "name": "Rotary Phone",
+  "short_name": "Phone",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e8ebed",
+  "theme_color": "#e8ebed",
+  "icons": [{ "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

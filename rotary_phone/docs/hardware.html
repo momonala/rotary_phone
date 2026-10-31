@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Rotary Phone Hardware</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Public+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; wiring diagram first, then pin table, then module and power notes. */
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --fg: #1d2420;
+  --muted: #5d6862;
+  --line: #d6dbd5;
+  --pcb: #121212;
+  --pcb-fg: #e8e8e8;
+  --pcb-edge: #3a3a3a;
+  --pcb-part: #2c2c2c;
+  --pcb-blue: #1d4f9a;
+  --pcb-blue-edge: #3f6fb8;
+  --pcb-blue-part: #163c75;
+  --ring: #2e8b57;
+  --audio: #b08800;
+  --input: #2d64a8;
+  --power: #d32f2f;
+  --caution: #8a4fa0;
+  --idle: #8b918d;
+  --wire-white: #ffffff;
+  --wire-outline: #7b807c;
+  --gnd: #111111;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131815; --surface: #1b211e; --fg: #e3e9e5; --muted: #9ba7a0; --line: #2f3833;
+    --pcb-edge: #4a4a4a;
+    --ring: #5fd08a; --audio: #f2c94c; --input: #7fb0ec; --power: #ff5252; --caution: #cf98e2; --idle: #66706a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131815; --surface: #1b211e; --fg: #e3e9e5; --muted: #9ba7a0; --line: #2f3833;
+  --pcb-edge: #4a4a4a;
+  --ring: #5fd08a; --audio: #f2c94c; --input: #7fb0ec; --power: #ff5252; --caution: #cf98e2; --idle: #66706a;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--body); font-size: 15px; line-height: 1.55;
+}
+main {
+  max-width: 1000px; margin: 0 auto;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px;
+}
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 2rem; font-weight: 700; }
+h2 { font-size: 1.25rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+header { display: grid; gap: 10px; }
+.lede { color: var(--muted); }
+section { display: grid; gap: 16px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.85rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; padding: 12px; }
+.figure svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.figure text { font-family: var(--mono); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.9rem; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--body); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.pin { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+td.gpio { font-family: var(--mono); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.def { font-family: var(--mono); font-size: 0.82rem; white-space: nowrap; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel h3 { margin: 0; font-family: var(--display); font-size: 1rem; font-weight: 700; }
+.panel ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.chain { font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; background: var(--bg); border-radius: 6px; padding: 12px; overflow-x: auto; white-space: pre; margin: 0; }
+.note { color: var(--muted); font-size: 0.88rem; }
+ul.note { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+</style>
+
+<main>
+  <header>
+    <h1>Rotary Phone Hardware</h1>
+    <p class="lede">Single-board build: an AZ-Delivery D1 Mini (ESP8266) rings the bell through a DRV8871 H-bridge, plays audio through a DFPlayer Mini, and reads the dial and hook switch. Last updated 2026-10-27.</p>
+  </header>
+
+  <section>
+    <h2>Wiring and mounting base</h2>
+    <div class="legend" id="legend"></div>
+    <div class="figure"><svg id="board" viewBox="0 0 1620 1490" role="img" aria-label="Modules laid out on the 122 by 86 mm mounting base, with wiring between the DFPlayer Mini, D1 Mini, DRV8871 and buck converter"></svg></div>
+    <ul class="note">
+      <li>Everything on the base is to scale (10 px = 1 mm), seen from above with the base in its printed orientation: terminal strip along the top edge, bells and ringer relay below, the notch clearing the relay. Ear and Bell boxes are not to scale.</li>
+      <li>Module positions are read off a test-fit photo, so treat them as ±3 mm. D1 Mini: front view, USB on the left. DFPlayer: SD slot on the left, used pins along the top edge. Buck: 24 V in at the top, 5 V out at the bottom.</li>
+      <li>Base outline clockwise from the top-left of the raised edge, mm: (12,0) (110,0) (110,3) (122,3) (122,86) (87,86) (87,48) (33,48) (33,86) (0,86) (0,3) (12,3). Mounting holes Ø2.3 at (7, 26.5) and (120.5, 32.4).</li>
+      <li>DRV8871: header order differs between breakout boards, so wire by the silkscreen labels, not by position. IN1/IN2 are drawn as built (D5 → IN1, D0 → IN2). 24 V goes to the ⊕/⊖ POWER screw terminal.</li>
+      <li>Tags with the same name are one connection; every GND is one common ground. A label at a wire's end names the pin it continues to.</li>
+      <li>The dial has four wires: two for the pulse contact and two for the off-normal contact. One wire of each pair goes to its pin, the other to GND. The hook switch is a separate contact in the cradle, not part of the dial.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Pin assignments</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pin</th><th>GPIO</th><th>Code name</th><th>Connects to</th><th>Group</th><th>Notes</th></tr></thead>
+        <tbody id="pins"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Modules</h2>
+    <div class="cols">
+      <div class="panel">
+        <h3>DRV8871</h3>
+        <ul>
+          <li>IN1 ← D5, IN2 ← D0 as built. Either way round: swapping only flips which way each half of the square wave goes. 3.3 V logic is fine; no logic supply pin.</li>
+          <li>24 V into the ⊕/⊖ POWER screw terminal (rated 6.5–45 V); ⊖ straight to supply −.</li>
+          <li>OUT1/OUT2 → bell, either way round.</li>
+          <li>Current limit set by the ILIM resistor: 30 kΩ on the Adafruit board ≈ 2 A. Only lower the resistor if the bell rings weakly.</li>
+          <li>Both inputs LOW = coast, then sleep after about 1 ms. Inputs have internal pull-downs, so the bell stays off while the D1 Mini boots.</li>
+          <li>Bell drive: 25 Hz square wave, 2 s on, 4 s off.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Bell</h3>
+        <ul>
+          <li>Original Siemens polarized ringer (Wecker), stamped "2.54": most likely made February 1954, probably from a W48. A permanent magnet holds the armature; the coil rocks it, so it needs alternating drive.</li>
+          <li>Single coil, label "1500 – 17000 – 0.08 CuL" (second row "DFG Bv.001"): 1500 Ω, 17,000 turns, 0.08 mm enamelled copper. Two blue wires from its tabs go straight to DRV8871 OUT1/OUT2; nothing else is needed.</li>
+          <li>Healthy coil reads a steady ~1.5 kΩ, measured with power off and one wire lifted from the driver. O.L means open: the fine wire has come off a tab. A reading that jumps when a blue wire is moved points at the broken end.</li>
+          <li>The 0.08 mm wire is thinner than a hair and dissolves in molten solder within seconds. It broke twice: once when the blue wires were soldered to the tabs (heat), once from ringing vibration after the repair. Repair with a quick touch of a tinned iron, a slack loop, the blue wire anchored to the frame, and glue over the joint.</li>
+          <li>Rewinding by hand isn't practical (17,000 turns). Replacement: search "W48 Weckerspule" or "Weckerspule 1500 Ohm"; any coil with the same label numbers is a drop-in.</li>
+          <li>24 V drive is marginal: these ringers were built for ~60–75 V at 25 Hz, and 24 V gives at most 16 mA. A slightly binding clapper or armature stops it. If it stays weak, raise the supply to ~36 V (DRV8871 max 45 V, LM2596 buck max 40 V).</li>
+          <li>Debug from <code>/status</code>: "DC" holds 24 V one way for 2 s (armature should clunk and hold), "AC" rings one 2 s burst. Both ignore the hook. Full 24 V AC at the driver with a silent bell means the coil circuit is open.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>DFPlayer Mini</h3>
+        <ul>
+          <li>RX ← D1 through 1 kΩ, TX → D2, 9600 baud software serial.</li>
+          <li>SPK2/SPK1 (pins 1 and 3 of the row with VCC, counting from the far end) → earpiece, wired direct. Neither SPK pin may touch GND, and nothing else may sit across SPK1–SPK2.</li>
+          <li>Earpiece is a 240 Ω telephone receiver. Before powering a new DFPlayer, measure across the SPK1/SPK2 wires with the DFPlayer unplugged: it must read about 240 Ω.</li>
+          <li>Two DFPlayers burnt out because the phone's own wiring shorted the earpiece wires together, so the amp drove a near-short (it read 6.2 Ω, mistaken for the earpiece). The same short made the earpiece far too quiet through 47 Ω and from DAC_R.</li>
+          <li>Flash a low-volume sketch before connecting a new DFPlayer, so it can't start up at full volume.</li>
+          <li>Firmware volume: 15 of 30 for calls (<code>VOLUME</code>), 25 for robot sounds (<code>SOUND_VOLUME</code>), 30 for the ring tone (<code>RING_VOLUME</code>). Raise in steps.</li>
+          <li>SD card: folder <code>01</code>, 21 tracks. Messages 000–011, robot sounds 012–014, songs 030–033, startup tone 098, "help me" 099. The card holds the levelled copies from <code>tools/normalize_audio.sh</code>: calls at −36.8 LUFS, robot sounds (012–014, 098) at −10.8 LUFS. Originals in <code>media/01</code> (gitignored).</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Phone contacts</h3>
+        <ul>
+          <li>D3 dial off-normal: LOW while the dial turns.</li>
+          <li>D7 dial pulse: one LOW→HIGH edge per pulse; 10 pulses = 0.</li>
+          <li>D6 hook: LOW when the handset is lifted. Debounced 100 ms in the firmware and <code>system_test</code>.</li>
+          <li>Status LED (D4): on while the handset is lifted, and flips for each dial click.</li>
+          <li>Verified 2026-10-27 with <code>hook_test</code> and <code>dial_test</code>: every digit 0–9 counted exactly, no stray pulses at rest.</li>
+          <li>All three are plain on/off contacts read as digital inputs, not analog. Internal pull-ups (<code>INPUT_PULLUP</code>); no resistors.</li>
+          <li>Telling the dial's two pairs apart: with a multimeter on continuity, the pulse pair flickers as the dial runs back; the off-normal pair changes state as soon as the dial leaves rest and stays that way until it returns.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Power</h2>
+    <div class="cols">
+      <div class="panel">
+        <h3>As built</h3>
+<pre class="chain">24 V supply
+ ├─ DRV8871 VM
+ └─ buck IN+ (LM2596, set to 5 V)
+     └─ buck OUT+
+         ├─ D1 Mini 5V
+         └─ DFPlayer VCC
+All grounds common. No extra capacitors or diodes.</pre>
+      </div>
+      <div class="panel">
+        <h3>Constraints</h3>
+        <ul>
+          <li>24 V, not 12 V: the bell didn't ring at 12 V.</li>
+          <li>Only 5 V on the D1 Mini's 5V pin.</li>
+          <li>DRV8871 GND goes straight to supply −, not through the D1 Mini's G pin, so bell current stays off the ESP's ground.</li>
+          <li>If ringing ever causes resets: add 1000 µF (35 V+) across DRV8871 VM and GND.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Build and flash</h2>
+    <div class="cols">
+      <div class="panel">
+        <h3>Toolchain</h3>
+        <ul>
+          <li><code>arduino-cli</code> (Homebrew), board package <code>esp8266:esp8266</code> 3.1.2, library <code>DFPlayerMini_Fast</code> 1.2.4.</li>
+          <li>Board <code>esp8266:esp8266:d1_mini</code>. The port name changes with the USB socket (seen <code>-110</code> and <code>-310</code>); find it with <code>ls /dev/cu.usbserial*</code>.</li>
+        </ul>
+<pre class="chain">cd ~/code/projects/rotary_phone
+# main firmware (WiFi from Keychain), or pass a test sketch folder
+rotary_phone/tools/flash.sh
+rotary_phone/tools/flash.sh system_test
+
+# reset the board and print 20 s of serial (9600 baud)
+python3 -I rotary_phone/tools/reset_and_read.py \
+  ~/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/pyserial \
+  /dev/cu.usbserial-310 20</pre>
+        <p class="note">The script uses the pyserial bundled with the board package. Garbage at the start of a boot is the boot ROM at 74880 baud.</p>
+      </div>
+      <div class="panel">
+        <h3>Sketches</h3>
+        <ul>
+          <li><code>system_test/</code>: full call without WiFi. Rings until pickup, plays 099, reads the dialed number, plays its track, rings again 10 s after hang-up.</li>
+          <li><code>bell_test/</code>: rings forever, ignores the hook.</li>
+          <li><code>audio_test/</code>: loops tracks 098 and 030–033 at volume 30; prints volume, track count, play status.</li>
+          <li><code>hook_test/</code>: LED on while lifted; prints every hook change.</li>
+          <li><code>dial_test/</code>: LED on while the dial is off rest; prints each digit and any stray pulse. Debounces both contacts 5 ms.</li>
+          <li><code>rotary_phone/</code>: main firmware, subscribed to <code>home/rotary_phone</code>. A track number rings, then plays that track 1 s after pickup; <code>play:N</code> plays track N straight away with no ring; <code>stop</code> silences the bell and any audio; anything else rings, plays 099 and plays the track for the dialed number. Ringing gives up after 2 min. It reports back on <code>home/rotary_phone/status</code> (ringing, picked_up, playing:N, dialed:N, hung_up, …), publishes a retained health snapshot on <code>/state</code> every 30 s and on hook changes, and keeps <code>/availability</code> at online, with an MQTT last will of offline. The heartbeat also re-applies the volume if the DFPlayer drifted from it. The web app shows these as toasts and on <code>/status</code>. WiFi comes from Keychain (<code>rotary_phone_wifi_ssid</code>, <code>rotary_phone_wifi_pass</code>) as build flags via <code>tools/flash.sh</code> (sketch name as the argument, default <code>rotary_phone</code>). <code>dialer.ino</code> has no pulse debounce yet; reuse <code>dial_test</code>'s if digits miscount.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const GROUPS = {
+  ring:    { label: "Bell (H-bridge)", color: "var(--ring)" },
+  audio:   { label: "Audio (DFPlayer)", color: "var(--audio)" },
+  input:   { label: "Dial and hook", color: "var(--input)" },
+  power:   { label: "Power", color: "var(--power)" },
+  gnd:     { label: "Ground", color: "var(--gnd)" },
+  caution: { label: "Built-in or reserved", color: "var(--caution)" },
+  idle:    { label: "Unused", color: "var(--idle)" },
+};
+
+const LEFT = [
+  ["RST", "", null, null, "idle"],
+  ["A0", "ADC0", null, null, "idle"],
+  ["D0", "GPIO16", "RING_PIN_A", "DRV8871 IN2", "ring", "No PWM or interrupts; fine for a 25 Hz toggle."],
+  ["D5", "GPIO14", "RING_PIN_B", "DRV8871 IN1", "ring", "Next to D0, so both bell wires run straight to the DRV8871."],
+  ["D6", "GPIO12", "PHONE_HOOK_PIN", "Hook switch", "input", "LOW while the handset is lifted."],
+  ["D7", "GPIO13", "NUMBER_PIN", "Dial pulse contact", "input", "One LOW→HIGH edge per pulse."],
+  ["D8", "GPIO15", "—", "Nothing", "caution", "Free. Must be LOW at boot; the on-board pull-down rules out switch inputs."],
+  ["3V3", "", null, null, "idle"],
+];
+
+const RIGHT = [
+  ["TX", "GPIO1", null, "USB serial", "caution", "USB serial; keep free."],
+  ["RX", "GPIO3", null, "USB serial", "caution", "USB serial; keep free."],
+  ["D1", "GPIO5", "SOFTWARE_SERIAL_TX", "DFPlayer RX (via 1 kΩ)", "audio", "Software serial, 9600 baud."],
+  ["D2", "GPIO4", "SOFTWARE_SERIAL_RX", "DFPlayer TX", "audio", ""],
+  ["D3", "GPIO0", "DIALING_PIN", "Dial off-normal contact", "input", "LOW while the dial turns. Must be HIGH at boot: fine, the contact is open at rest."],
+  ["D4", "GPIO2", "STATUS_LED_PIN", "On-board LED", "caution", "Active LOW. On while the handset is lifted; flips on each dial click. Must be HIGH at boot."],
+  ["GND", "", null, "Common ground", "gnd", ""],
+  ["5V", "", null, "5 V from buck", "power", "5 V only."],
+];
+
+const ORDER = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "RX", "TX", "5V", "GND"];
+
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("board");
+const layers = { boards: el("g", {}), wires: el("g", {}), pins: el("g", {}) };
+svg.append(layers.boards, layers.wires, layers.pins);
+
+function el(tag, attrs, text) {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+function text(layer, x, y, str, { anchor = "middle", size = 11, color = "var(--pcb-fg)", weight = 400 } = {}) {
+  layers[layer].append(el("text", { x, y, "text-anchor": anchor, "font-size": size, "font-weight": weight, style: `fill: ${color}` }, str));
+}
+
+function board(x, y, w, h, color = "pcb") {
+  layers.boards.append(el("rect", { x, y, width: w, height: h, rx: 8, style: `fill: var(--${color}); stroke: var(--${color}-edge)` }));
+}
+
+function part(x, y, w, h, color = "pcb") {
+  layers.boards.append(el("rect", { x, y, width: w, height: h, rx: 3, style: `fill: var(--${color}-part)` }));
+}
+
+function pin(x, y, label, side, group) {
+  const color = group ? GROUPS[group].color : null;
+  layers.pins.append(el("circle", { cx: x, cy: y, r: 5, style: color ? `fill: ${color}; stroke: ${group === "gnd" ? "var(--wire-outline)" : color}` : "fill: var(--pcb); stroke: var(--idle)" }));
+  if (!label) return;
+  const opts = { size: side === "below" ? 9 : 11, weight: color ? 600 : 400, color: color ? "var(--pcb-fg)" : "var(--idle)" };
+  if (side === "left") text("pins", x + 12, y + 4, label, { ...opts, anchor: "start" });
+  if (side === "right") text("pins", x - 12, y + 4, label, { ...opts, anchor: "end" });
+  if (side === "below") text("pins", x, y + 19, label, opts);
+  if (side === "above") text("pins", x, y - 11, label, opts);
+}
+
+const WHITE_WIRE = "var(--wire-white)";
+const OUTLINED = [WHITE_WIRE, "var(--gnd)"];
+
+function wire(points, group, color = GROUPS[group].color) {
+  const pts = points.map(p => p.join(",")).join(" ");
+  const base = { points: pts, fill: "none", "stroke-linejoin": "round", "stroke-linecap": "round" };
+  layers.wires.append(el("polyline", { ...base, "stroke-width": 7, style: "stroke: var(--surface)" }));
+  if (OUTLINED.includes(color)) layers.wires.append(el("polyline", { ...base, "stroke-width": 4.5, style: "stroke: var(--wire-outline)" }));
+  layers.wires.append(el("polyline", { ...base, "stroke-width": 2.5, style: `stroke: ${color}` }));
+}
+
+function tag(x, y, str, anchor) {
+  const w = str.length * 6.2 + 12;
+  const left = anchor === "start" ? x : anchor === "end" ? x - w : x - w / 2;
+  layers.pins.append(el("rect", { x: left, y: y - 8, width: w, height: 16, rx: 8, style: str === "GND" ? "fill: var(--gnd); stroke: var(--wire-outline)" : "fill: var(--power)" }));
+  text("pins", left + w / 2, y + 3.5, str, { size: 10, weight: 600, color: str === "GND" ? "#ffffff" : "var(--surface)" });
+}
+
+function box(x, y, w, h, label) {
+  layers.boards.append(el("rect", { x, y, width: w, height: h, rx: 4, style: "fill: var(--surface); stroke: var(--muted)" }));
+  text("boards", x + w / 2, y + h / 2 + 4, label, { color: "var(--fg)" });
+}
+
+const S = 10;
+const OX = 300, OY = 330;
+const X = v => OX + v * S;
+const Y = v => OY + v * S;
+const P = (x, y) => [X(x), Y(y)];
+const PITCH = 2.54;
+
+const D1 = { x: 12, y: 9, w: 34.2, h: 25.6 };
+const D1_TOP = ["3V3", "D8", "D7", "D6", "D5", "D0", "A0", "RST"];
+const D1_BOTTOM = ["5V", "GND", "D4", "D3", "D2", "D1", "RX", "TX"];
+const d1X = i => D1.x + 12.5 + i * PITCH;
+const D1_TOP_Y = D1.y + 1.4, D1_BOT_Y = D1.y + D1.h - 1.4;
+const d1 = name => {
+  const t = D1_TOP.indexOf(name);
+  return t >= 0 ? [d1X(t), D1_TOP_Y] : [d1X(D1_BOTTOM.indexOf(name)), D1_BOT_Y];
+};
+
+const DFP = { x: 5, y: 52, w: 20.5, h: 20.5 };
+const DFP_T = DFP.y + 1.3, DFP_B = DFP.y + DFP.h - 1.3;
+const dfpX = i => DFP.x + (DFP.w - 7 * PITCH) / 2 + i * PITCH;
+
+const DRV = { x: 52, y: 10, w: 25.4, h: 20.3 };
+const DRV_HDR = DRV.x + 1.3, DRV_TERM = DRV.x + DRV.w - 2;
+const drvY = i => DRV.y + 5 + i * PITCH;
+
+const BUCK = { x: 93, y: 16, w: 21, h: 43 };
+
+function poly(points, style, width) {
+  layers.boards.append(el("polyline", { points: points.map(([x, y]) => `${X(x)},${Y(y)}`).join(" "), fill: "none", "stroke-width": width, style }));
+}
+
+function rotText(x, y, str, color) {
+  layers.pins.append(el("text", { x: X(x), y: Y(y), "text-anchor": "start", "font-size": 11, "font-weight": 600, transform: `rotate(-90 ${X(x)} ${Y(y)})`, style: `fill: ${color}` }, str));
+}
+
+function dim(x1, y1, x2, y2, label, tx, ty, rotate = false) {
+  layers.boards.append(el("line", { x1: X(x1), y1: Y(y1), x2: X(x2), y2: Y(y2), "marker-start": "url(#arr)", "marker-end": "url(#arr)", style: "stroke: var(--muted); stroke-width: 1" }));
+  const attrs = { x: X(tx), y: Y(ty), "text-anchor": "middle", "font-size": 13, style: "fill: var(--muted)" };
+  if (rotate) attrs.transform = `rotate(-90 ${X(tx)} ${Y(ty)})`;
+  layers.boards.append(el("text", attrs, label));
+}
+
+function drawBase() {
+  const defs = el("defs", {});
+  const marker = el("marker", { id: "arr", viewBox: "0 0 6 6", refX: 3, refY: 3, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" });
+  marker.append(el("path", { d: "M0,0L6,3L0,6z", style: "fill: var(--muted)" }));
+  defs.append(marker);
+  svg.prepend(defs);
+  const outline = [[12, 0], [110, 0], [110, 3], [122, 3], [122, 86], [87, 86], [87, 48], [33, 48], [33, 86], [0, 86], [0, 3], [12, 3]];
+  layers.boards.append(el("polygon", { points: outline.map(([x, y]) => `${X(x)},${Y(y)}`).join(" "), style: "fill: var(--bg); stroke: var(--fg); stroke-width: 2" }));
+  for (const [x, y] of [[7, 26.5], [120.5, 32.4]]) {
+    layers.boards.append(el("circle", { cx: X(x), cy: Y(y), r: 1.15 * S, style: "fill: var(--surface); stroke: var(--fg); stroke-width: 1.5" }));
+  }
+  text("boards", X(60), Y(66), "ringer relay", { size: 13, color: "var(--muted)" });
+  text("boards", X(84), Y(-4), "terminal strip side", { size: 12, color: "var(--muted)" });
+
+  dim(0, 112, 122, 112, "122", 61, 110.6);
+  dim(0, 104, 33, 104, "33", 16.5, 102.6);
+  dim(33, 104, 87, 104, "54", 60, 102.6);
+  dim(87, 104, 122, 104, "35", 104.5, 102.6);
+  dim(-24, 0, -24, 86, "86", -25.4, 43, true);
+  dim(40, 48, 40, 86, "38", 38.6, 67, true);
+  dim(0, -4, 12, -4, "12", 6, -5.4);
+  dim(128, 0, 128, 3, "3", 131, 2.4);
+}
+
+function drawD1Mini() {
+  board(X(D1.x), Y(D1.y), D1.w * S, D1.h * S);
+  part(X(D1.x - 1), Y(D1.y + 8.8), 70, 80);
+  text("boards", X(D1.x + 2.5), Y(D1.y + 13.6), "USB", { size: 10 });
+  part(X(D1.x + 12), Y(D1.y + 5), 180, 150);
+  text("boards", X(D1.x + 21), Y(D1.y + 12.6), "D1 Mini", { size: 13, weight: 600 });
+  text("boards", X(D1.x + 21), Y(D1.y + 14.4), "front view", { size: 10, color: "var(--idle)" });
+  const info = Object.fromEntries([...LEFT, ...RIGHT].map(r => [r[0], r]));
+  D1_TOP.forEach((name, i) => { const r = info[name]; pin(X(d1X(i)), Y(D1_TOP_Y), name, "below", r && r[3] ? r[4] : null); });
+  D1_BOTTOM.forEach((name, i) => { const r = info[name === "GND" ? "GND" : name]; pin(X(d1X(i)), Y(D1_BOT_Y), name === "GND" ? "G" : name, "above", r && r[3] ? r[4] : null); });
+}
+
+function drawDFPlayer() {
+  board(X(DFP.x), Y(DFP.y), DFP.w * S, DFP.h * S);
+  part(X(DFP.x - 1.5), Y(DFP.y + 7), 50, 70);
+  text("boards", X(DFP.x + 1), Y(DFP.y + 9.3), "SD", { size: 9 });
+  text("boards", X(DFP.x + 12), Y(DFP.y + 9.8), "DFPlayer", { weight: 600 });
+  text("boards", X(DFP.x + 12), Y(DFP.y + 11.3), "Mini", { weight: 600 });
+  const top = [["SPK2", "audio"], ["GND"], ["SPK1", "audio"], ["DAC_L"], ["DAC_R"], ["TX", "audio"], ["RX", "audio"], ["VCC", "power"]];
+  const bottom = [["IO1"], ["GND", "gnd"], ["IO2"], ["ADKEY1"], ["ADKEY2"], ["USB+"], ["USB-"], ["BUSY"]];
+  const label = (x, y, name, group, anchor) => layers.pins.append(el("text", {
+    x, y, "text-anchor": anchor, "font-size": 9, "font-weight": group ? 600 : 400,
+    transform: `rotate(-90 ${x} ${y})`, style: `fill: ${group ? "var(--pcb-fg)" : "var(--idle)"}`,
+  }, name));
+  top.forEach(([name, group], i) => {
+    pin(X(dfpX(i)), Y(DFP_T), null, null, group);
+    label(X(dfpX(i)) + 3, Y(DFP_T) + 9, name, group, "end");
+  });
+  bottom.forEach(([name, group], i) => {
+    pin(X(dfpX(i)), Y(DFP_B), null, null, group);
+    label(X(dfpX(i)) + 3, Y(DFP_B) - 9, name, group, "start");
+  });
+}
+
+function drawDRV8871() {
+  board(X(DRV.x), Y(DRV.y), DRV.w * S, DRV.h * S);
+  part(X(DRV.x + 8), Y(DRV.y + 6), 60, 50);
+  part(X(DRV.x + DRV.w - 4.2), Y(DRV.y + 0.8), 42, 186);
+  text("boards", X(DRV.x + 11), Y(DRV.y + 15), "DRV8871", { size: 13, weight: 600 });
+  text("boards", X(DRV.x + 11), Y(DRV.y + 16.8), "ILIM ≈ 2 A", { size: 10, color: "var(--idle)" });
+  [["IN1", "ring"], ["IN2", "ring"], ["VM"], ["GND"]].forEach(([name, group], i) => pin(X(DRV_HDR), Y(drvY(i)), name, "left", group));
+  pin(X(DRV_TERM), Y(DRV.y + 2.5), "OUT1", "right", "ring");
+  pin(X(DRV_TERM), Y(DRV.y + 6), "OUT2", "right", "ring");
+  pin(X(DRV_TERM), Y(DRV.y + 12), "⊕", "right", "power");
+  pin(X(DRV_TERM), Y(DRV.y + 16), "⊖", "right", "gnd");
+}
+
+function drawBuck() {
+  board(X(BUCK.x), Y(BUCK.y), BUCK.w * S, BUCK.h * S, "pcb-blue");
+  const cx = X(BUCK.x + BUCK.w / 2);
+  layers.boards.append(el("circle", { cx, cy: Y(BUCK.y + 10), r: 38, style: "fill: var(--pcb-blue-part)" }));
+  text("boards", cx, Y(BUCK.y + 10.4), "220µ", { size: 10 });
+  part(cx - 60, Y(BUCK.y + 19), 120, 120, "pcb-blue");
+  text("boards", cx, Y(BUCK.y + 24.5), "Buck", { weight: 600 });
+  text("boards", cx, Y(BUCK.y + 26), "5 V out", { size: 10 });
+  layers.boards.append(el("circle", { cx, cy: Y(BUCK.y + 37), r: 30, style: "fill: var(--pcb-blue-part)" }));
+  text("boards", cx, Y(BUCK.y + 37.4), "100µ", { size: 9 });
+  pin(X(BUCK.x + 2), Y(BUCK.y + 1.6), "IN+", "left", "power");
+  pin(X(BUCK.x + BUCK.w - 2), Y(BUCK.y + 1.6), "IN−", "right", "gnd");
+  pin(X(BUCK.x + 2), Y(BUCK.y + BUCK.h - 1.6), "OUT+", "left", "power");
+  pin(X(BUCK.x + BUCK.w - 2), Y(BUCK.y + BUCK.h - 1.6), "OUT−", "right", "gnd");
+}
+
+const mmWire = (points, group, color) => wire(points.map(([x, y]) => P(x, y)), group, color);
+const mmTag = (x, y, str, anchor) => tag(X(x), Y(y), str, anchor);
+
+function drawWires() {
+  const [d7x, d7y] = d1("D7");
+  mmWire([[d7x, d7y], [d7x, -10], [15, -10], [15, -14]], "input");
+  rotText(d7x + 0.4, -1.5, "pulse", GROUPS.input.color);
+  const [d3x, d3y] = d1("D3");
+  mmWire([[d3x, d3y], [d3x, 41.5], [9.5, 41.5], [9.5, -14]], "input");
+  rotText(9.9, -1.5, "off-normal", GROUPS.input.color);
+  box(X(2), Y(-24), 180, 100, "Rotary dial");
+  mmWire([[6, -24], [6, -27], [14, -27], [14, -24]], "gnd"); mmTag(10, -28, "GND", "middle");
+
+  const [d6x, d6y] = d1("D6");
+  mmWire([[d6x, d6y], [d6x, -14]], "input");
+  rotText(d6x + 0.4, -1.5, "hook", GROUPS.input.color);
+  box(X(27), Y(-24), 110, 100, "Hook");
+  mmWire([[32.5, -24], [32.5, -27]], "gnd"); mmTag(32.5, -28, "GND", "middle");
+
+  const [d5x, d5y] = d1("D5");
+  mmWire([[d5x, d5y], [d5x, 3.5], [50, 3.5], [50, drvY(0)], [DRV_HDR, drvY(0)]], "ring");
+  const [d0x, d0y] = d1("D0");
+  mmWire([[d0x, d0y], [d0x, 6], [48.5, 6], [48.5, drvY(1)], [DRV_HDR, drvY(1)]], "ring");
+
+  const [d2x, d2y] = d1("D2");
+  mmWire([[d2x, d2y], [d2x, 44], [dfpX(5), 44], [dfpX(5), DFP_T]], "audio", "var(--ring)");
+  const [d1x, d1y] = d1("D1");
+  mmWire([[d1x, d1y], [d1x, 46.5], [dfpX(6), 46.5], [dfpX(6), DFP_T]], "audio");
+  layers.wires.append(el("rect", { x: X(29) - 15, y: Y(46.5) - 6, width: 30, height: 12, rx: 2, style: "fill: var(--surface); stroke: var(--audio); stroke-width: 2" }));
+  text("wires", X(29), Y(46.5) + 20, "1 kΩ", { size: 10, color: "var(--audio)" });
+
+  mmWire([[dfpX(2), DFP_T], [dfpX(2), 47], [-4, 47]], "audio");
+  mmWire([[dfpX(0), DFP_T], [dfpX(0), 49.5], [-4, 49.5]], "audio");
+  box(X(-17), Y(43), 130, 90, "Ear");
+
+  mmWire([[DRV_TERM, DRV.y + 2.5], [84, DRV.y + 2.5], [84, 92]], "ring", WHITE_WIRE);
+  mmWire([[DRV_TERM, DRV.y + 6], [82, DRV.y + 6], [82, 92]], "ring", WHITE_WIRE);
+  box(X(74), Y(92), 160, 70, "Bell");
+
+  const [v5x, v5y] = d1("5V");
+  mmWire([[v5x, v5y], [v5x, 36.5], [21, 36.5]], "power"); mmTag(20.8, 36.5, "5 V", "end");
+  const [gx, gy] = d1("GND");
+  mmWire([[gx, gy], [gx, 39.5], [21, 39.5]], "gnd"); mmTag(20.8, 39.5, "GND", "end");
+  mmWire([[dfpX(7), DFP_T], [dfpX(7), 50], [27, 50]], "power"); mmTag(27.2, 50, "5 V", "start");
+  mmWire([[dfpX(1), DFP_B], [dfpX(1), 76]], "gnd"); mmTag(dfpX(1), 77, "GND", "middle");
+  mmWire([[DRV_TERM, DRV.y + 12], [77.5, DRV.y + 12]], "power"); mmTag(77.7, DRV.y + 12, "24 V", "start");
+  mmWire([[DRV_TERM, DRV.y + 16], [77.5, DRV.y + 16]], "gnd"); mmTag(77.7, DRV.y + 16, "GND", "start");
+  mmWire([[BUCK.x + 2, BUCK.y + 1.6], [BUCK.x + 2, 10]], "power"); mmTag(BUCK.x + 2, 9, "24 V", "middle");
+  mmWire([[BUCK.x + BUCK.w - 2, BUCK.y + 1.6], [BUCK.x + BUCK.w - 2, 10]], "gnd"); mmTag(BUCK.x + BUCK.w - 2, 9, "GND", "middle");
+  mmWire([[BUCK.x + 2, BUCK.y + BUCK.h - 1.6], [BUCK.x + 2, 65]], "power"); mmTag(BUCK.x + 2, 66, "5 V", "middle");
+  mmWire([[BUCK.x + BUCK.w - 2, BUCK.y + BUCK.h - 1.6], [BUCK.x + BUCK.w - 2, 65]], "gnd"); mmTag(BUCK.x + BUCK.w - 2, 66, "GND", "middle");
+}
+
+function fillLegend() {
+  const legend = document.getElementById("legend");
+  for (const g of Object.values(GROUPS)) {
+    const s = document.createElement("span");
+    s.innerHTML = `<i class="dot" style="background:${g.color}"></i>${g.label}`;
+    legend.append(s);
+  }
+}
+
+function fillTable() {
+  const tbody = document.getElementById("pins");
+  const rows = [...LEFT, ...RIGHT].filter(r => r[3]).sort((a, b) => ORDER.indexOf(a[0]) - ORDER.indexOf(b[0]));
+  for (const [pin, gpio, def, conn, group, note = ""] of rows) {
+    const g = GROUPS[group];
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="pin">${pin}</td>
+      <td class="gpio">${gpio || "—"}</td>
+      <td class="def">${def || "—"}</td>
+      <td>${conn}</td>
+      <td><span class="tag" style="color:${g.color}">${g.label}</span></td>
+      <td>${note}</td>`;
+    tbody.append(tr);
+  }
+}
+
+fillLegend();
+drawBase();
+drawDFPlayer();
+drawD1Mini();
+drawDRV8871();
+drawBuck();
+drawWires();
+fillTable();
+</script>
+
+</body>
+</html>
