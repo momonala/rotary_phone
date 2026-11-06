@@ -28,11 +28,6 @@ packages = ["rotary_phone"]
 app = "rotary_phone.web.app:main"
 config = "rotary_phone.web.config:main"
 
-[tool.black]
-line-length = 110
-target-version = ['py312']
-include = '\.pyi?$'
-
 [tool.pytest.ini_options]
 testpaths = ["rotary_phone/web/tests"]
 python_files = ["test_*.py"]

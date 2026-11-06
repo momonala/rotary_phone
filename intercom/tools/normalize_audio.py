@@ -20,7 +20,9 @@ PEAK_LIMIT = 0.84  # -1.5 dBFS
 
 
 def ffmpeg(*args: str) -> str:
-    result = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", *args], capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-nostats", *args], capture_output=True, text=True, check=True
+    )
     return result.stderr
 
 
@@ -36,16 +38,28 @@ def peak_level(path: Path) -> float:
 
 def encode(source: Path, dest: Path, gain_db: float) -> None:
     ffmpeg(
-        "-y", "-i", str(source),
-        "-af", f"volume={gain_db:.2f}dB,alimiter=limit={PEAK_LIMIT}:level=disabled",
-        "-ar", "44100", "-ac", "2", "-b:a", "192k", "-map_metadata", "-1",
+        "-y",
+        "-i",
+        str(source),
+        "-af",
+        f"volume={gain_db:.2f}dB,alimiter=limit={PEAK_LIMIT}:level=disabled",
+        "-ar",
+        "44100",
+        "-ac",
+        "2",
+        "-b:a",
+        "192k",
+        "-map_metadata",
+        "-1",
         str(dest),
     )
 
 
 def main(
     target: Annotated[float, typer.Option(help="Target mean level in dB within the speaker band.")] = -14.0,
-    source: Annotated[Path, typer.Option(help="Folder of unnormalized tracks.")] = MEDIA / "originals" / "unnormalized",
+    source: Annotated[Path, typer.Option(help="Folder of unnormalized tracks.")] = MEDIA
+    / "originals"
+    / "unnormalized",
     dest: Annotated[Path, typer.Option(help="SD card folder to write to.")] = MEDIA / "01",
 ) -> None:
     dest.mkdir(parents=True, exist_ok=True)
@@ -58,7 +72,9 @@ def main(
                 gain += target - band_level(trial)
         out = dest / track.name
         encode(track, out, gain)
-        print(f"{track.name:32} gain {gain:+5.1f} dB  band {band_level(out):6.1f} dB  peak {peak_level(out):5.1f} dB")
+        print(
+            f"{track.name:32} gain {gain:+5.1f} dB  band {band_level(out):6.1f} dB  peak {peak_level(out):5.1f} dB"
+        )
 
 
 if __name__ == "__main__":

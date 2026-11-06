@@ -10,7 +10,7 @@ import glob
 import sys
 import time
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import serial
 import typer
@@ -27,9 +27,11 @@ def find_port() -> str:
 
 
 def main(
-    output: Annotated[Optional[Path], typer.Option("--output", "-o", help="File to save the raw edges to.")] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="File to save the raw edges to.")
+    ] = None,
     seconds: Annotated[float, typer.Option("--seconds", "-s")] = 90,
-    port_name: Annotated[Optional[str], typer.Option("--port", "-p")] = None,
+    port_name: Annotated[str | None, typer.Option("--port", "-p")] = None,
 ) -> None:
     port_name = port_name or find_port()
     port = serial.Serial(port_name, BAUD, timeout=0.2)
@@ -67,7 +69,10 @@ def main(
                     continue
                 clock_us += delta
                 if burst_start is not None and clock_us - last_edge_us > BURST_GAP_US:
-                    print(f"  burst at {burst_start / 1e6:6.2f} s: {(last_edge_us - burst_start) / 1e3:6.0f} ms, {burst_edges} edges", flush=True)
+                    print(
+                        f"  burst at {burst_start / 1e6:6.2f} s: {(last_edge_us - burst_start) / 1e3:6.0f} ms, {burst_edges} edges",
+                        flush=True,
+                    )
                     burst_start = None
                 if burst_start is None:
                     burst_start = clock_us
@@ -80,7 +85,9 @@ def main(
         if out:
             out.close()
     if burst_start is not None:
-        print(f"  burst at {burst_start / 1e6:6.2f} s: {(last_edge_us - burst_start) / 1e3:6.0f} ms, {burst_edges} edges")
+        print(
+            f"  burst at {burst_start / 1e6:6.2f} s: {(last_edge_us - burst_start) / 1e3:6.0f} ms, {burst_edges} edges"
+        )
     print("Done.")
 
 
