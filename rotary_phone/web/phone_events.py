@@ -5,11 +5,14 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass
+from enum import StrEnum
 from threading import Lock
 
 import paho.mqtt.client as mqtt
 
 logger = logging.getLogger(__name__)
+
+HEARTBEAT_STALE_S = 75
 
 STATUS_TEXT = {
     "online": "Phone online",
@@ -60,6 +63,23 @@ class EventLog:
             return self._last_id
 
 
+class DeviceStatus(StrEnum):
+    ONLINE = "online"
+    STALE = "stale"
+    OFFLINE = "offline"
+    BROKER_DOWN = "broker_down"
+
+
+def device_status(availability: str | None, health_age_s: int | None, broker_connected: bool) -> DeviceStatus:
+    if availability != "online":
+        return DeviceStatus.OFFLINE
+    if health_age_s is None or health_age_s > HEARTBEAT_STALE_S:
+        return DeviceStatus.STALE
+    if not broker_connected:
+        return DeviceStatus.BROKER_DOWN
+    return DeviceStatus.ONLINE
+
+
 class PhoneState:
     def __init__(self):
         self._lock = Lock()
@@ -80,12 +100,14 @@ class PhoneState:
     def snapshot(self) -> dict:
         now = time.time()
         with self._lock:
+            health_age_s = _age(self.health_at, now)
             return {
+                "status": device_status(self.availability, health_age_s, self.broker_connected),
                 "broker_connected": self.broker_connected,
                 "availability": self.availability,
                 "availability_age_s": _age(self.availability_at, now),
                 "health": self.health,
-                "health_age_s": _age(self.health_at, now),
+                "health_age_s": health_age_s,
             }
 
 

@@ -94,6 +94,7 @@ def test_api_status_reports_phone_health_and_events(client, monkeypatch):
 
     body = client.get("/api/status").get_json()
 
+    assert body["phone"]["status"] == "broker_down"
     assert body["phone"]["availability"] == "online"
     assert body["phone"]["health"]["dfplayer_volume"] == 15
     assert [event["text"] for event in body["events"]] == ["Picked up", "Ringing"]

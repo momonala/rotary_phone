@@ -46,7 +46,6 @@
   <script src="{{ url_for('static', filename='app.js') }}"></script>
   <script>
     const REFRESH_MS = 3000;
-    const HEARTBEAT_STALE_S = 75;
 
     function duration(seconds) {
       if (seconds === null || seconds === undefined) return "never";
@@ -115,12 +114,11 @@
       }
       const phone = data.phone;
       const health = phone.health;
-      const online = phone.availability === "online";
-      const stale = phone.health_age_s === null || phone.health_age_s > HEARTBEAT_STALE_S;
+      const offline = phone.status === "offline";
 
       const phoneRows = [
-        ["Connection", phone.availability === null ? "Unknown" : online ? "Online" : "Offline", !online],
-        ["Last report", `${duration(phone.health_age_s)} ago`, online && stale],
+        ["Connection", phone.availability === null ? "Unknown" : offline ? "Offline" : "Online", offline],
+        ["Last report", `${duration(phone.health_age_s)} ago`, phone.status === "stale"],
       ];
       if (health) {
         const wifi = signal(health.wifi_rssi);
