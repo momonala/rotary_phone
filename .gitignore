@@ -5,6 +5,7 @@ test*
 
 !tests/
 !tests/**
+!rotary_phone/web/tests/**
 !test-and-lint.sh
 __pycache__/
 .venv/
