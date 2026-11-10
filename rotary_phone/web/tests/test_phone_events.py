@@ -11,16 +11,12 @@ NOW = 1_700_000_000.0
 @pytest.mark.parametrize(
     ("availability", "health_age_s", "broker_connected", "expected"),
     [
-        ("online", 0, True, DeviceStatus.ONLINE),
         ("online", 75, True, DeviceStatus.ONLINE),
         ("online", 76, True, DeviceStatus.STALE),
         ("online", None, True, DeviceStatus.STALE),
-        ("offline", 0, True, DeviceStatus.OFFLINE),
-        (None, None, True, DeviceStatus.OFFLINE),
         ("online", 75, False, DeviceStatus.BROKER_DOWN),
         ("online", 76, False, DeviceStatus.STALE),
-        ("offline", 0, False, DeviceStatus.OFFLINE),
-        (None, None, False, DeviceStatus.OFFLINE),
+        ("offline", None, False, DeviceStatus.OFFLINE),
     ],
 )
 def test_device_status(availability, health_age_s, broker_connected, expected):

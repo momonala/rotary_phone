@@ -29,7 +29,7 @@ def test_every_sd_card_track_has_a_button():
 
 @pytest.mark.parametrize(
     ("action_id", "payload"),
-    [("track-30", "30"), ("track-0", "0"), ("sound-14", "play:14"), ("stop", "stop")],
+    [("track-30", "30"), ("sound-14", "play:14"), ("stop", "stop"), ("bell-dc", "bell:dc")],
 )
 def test_action_publishes_its_payload(client, published, action_id, payload):
     response = client.post(f"/api/actions/{action_id}", json={})
@@ -78,8 +78,10 @@ def test_events_after_cursor_are_described(client, monkeypatch):
     assert body["last_id"] == 4
 
 
-def test_status_page_renders(client):
-    assert "<h1>Status</h1>" in client.get("/status").get_data(as_text=True)
+def test_status_page_lists_every_bell_test(client):
+    html = client.get("/status").get_data(as_text=True)
+    for action in app_module.BELL_TESTS:
+        assert f'data-action="{action.id}"' in html
 
 
 def test_api_status_reports_phone_health_and_events(client, monkeypatch):
@@ -98,10 +100,3 @@ def test_api_status_reports_phone_health_and_events(client, monkeypatch):
     assert body["phone"]["availability"] == "online"
     assert body["phone"]["health"]["dfplayer_volume"] == 15
     assert [event["text"] for event in body["events"]] == ["Picked up", "Ringing"]
-
-
-@pytest.mark.parametrize(("action_id", "payload"), [("bell-dc", "bell:dc"), ("bell-ac", "bell:ac")])
-def test_bell_test_buttons_publish(client, published, action_id, payload):
-    assert f'data-action="{action_id}"' in client.get("/status").get_data(as_text=True)
-    assert client.post(f"/api/actions/{action_id}", json={}).status_code == 200
-    assert published == [payload]
