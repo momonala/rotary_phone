@@ -29,7 +29,7 @@ def test_every_sd_card_track_has_a_button():
 
 @pytest.mark.parametrize(
     ("action_id", "payload"),
-    [("track-30", "30"), ("sound-14", "play:14"), ("stop", "stop"), ("bell-dc", "bell:dc")],
+    [("track-30", "30"), ("sound-14", "play:14"), ("stop", "stop"), ("bell-dc", "bell:dc"), ("bell-ac", "bell:ac")],
 )
 def test_action_publishes_its_payload(client, published, action_id, payload):
     response = client.post(f"/api/actions/{action_id}", json={})
