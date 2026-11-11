@@ -18,6 +18,8 @@ NOW = 1_700_000_000.0
         ("online", 76, False, DeviceStatus.BROKER_DOWN),
         ("offline", None, False, DeviceStatus.BROKER_DOWN),
         ("offline", 10, True, DeviceStatus.OFFLINE),
+        ("offline", None, True, DeviceStatus.OFFLINE),
+        (None, 10, True, DeviceStatus.OFFLINE),
     ],
 )
 def test_device_status(availability, health_age_s, broker_connected, expected):
