@@ -52,10 +52,22 @@ PubSubClient mqttClient(espClient);
 bool hook_raw_lifted = false;
 bool hook_lifted = false;
 unsigned long hook_raw_since = 0;
+enum class Command : uint8_t { NONE, STOP, PLAY, RING, BELL };
+enum class BellMode : uint8_t { NONE, DC, AC };
+enum class RingInterrupt : uint8_t { NONE, LIFTED, STOPPED };
+
+struct PendingCommand {
+  Command command;
+  int track;
+  BellMode bell;
+};
+
+const PendingCommand NO_COMMAND = {Command::NONE, -1, BellMode::NONE};
+
+PendingCommand pending_command = NO_COMMAND;
 bool ring_requested = false;
-bool stop_requested = false;
 int requested_track = -1;
-String bell_test_request = "";
+BellMode bell_test_mode = BellMode::NONE;
 unsigned long last_heartbeat = 0;
 unsigned int mqtt_connects = 0;
 int dfplayer_volume = -1;
@@ -80,21 +92,51 @@ void update_led() {
   digitalWrite(STATUS_LED_PIN, hook_lifted != dial_click ? LOW : HIGH);
 }
 
-void poll() {
-  mqttClient.loop();
-  update_hook();
-  update_led();
+PendingCommand consume_command() {
+  PendingCommand taken = pending_command;
+  pending_command = NO_COMMAND;
+  return taken;
 }
 
-bool ring_wait(unsigned long ms) {
+Command act_on_command(const PendingCommand& pending) {
+  switch (pending.command) {
+    case Command::STOP:
+      DFPlayer.stop();
+      break;
+    case Command::PLAY:
+      play_sound(pending.track);
+      break;
+    case Command::RING:
+      requested_track = pending.track;
+      ring_requested = true;
+      break;
+    case Command::BELL:
+      bell_test_mode = pending.bell;
+      break;
+    case Command::NONE:
+      break;
+  }
+  return pending.command;
+}
+
+Command poll() {
+  mqttClient.loop();
+  Command command = act_on_command(consume_command());
+  update_hook();
+  update_led();
+  return command;
+}
+
+RingInterrupt ring_wait(unsigned long ms) {
   unsigned long start = millis();
   while (millis() - start < ms) {
-    poll();
-    if (hook_lifted || stop_requested)
-      return true;
+    if (poll() == Command::STOP)
+      return RingInterrupt::STOPPED;
+    if (hook_lifted)
+      return RingInterrupt::LIFTED;
     delay(1);
   }
-  return false;
+  return RingInterrupt::NONE;
 }
 
 bool wait_while_lifted(unsigned long ms) {
@@ -115,28 +157,26 @@ void bell_off() {
 bool ring_until_picked_up() {
   Serial.println("Phone ringing. Waiting...");
   report("ringing");
-  stop_requested = false;
+  RingInterrupt interrupt = RingInterrupt::NONE;
   unsigned long started = millis();
-  while (millis() - started < MAX_RING_MS) {
+  while (interrupt == RingInterrupt::NONE && millis() - started < MAX_RING_MS) {
     unsigned long burst_start = millis();
     bool polarity = false;
-    bool interrupted = false;
     set_volume(RING_VOLUME);
     DFPlayer.playFolder(AUDIO_FOLDER, RING_TRACK);
-    while (!interrupted && millis() - burst_start < RING_ON_MS) {
+    while (interrupt == RingInterrupt::NONE && millis() - burst_start < RING_ON_MS) {
       polarity = !polarity;
       digitalWrite(RING_PIN_A, polarity ? HIGH : LOW);
       digitalWrite(RING_PIN_B, polarity ? LOW : HIGH);
-      interrupted = ring_wait(BELL_HALF_PERIOD_MS);
+      interrupt = ring_wait(BELL_HALF_PERIOD_MS);
     }
     bell_off();
-    if (interrupted || ring_wait(RING_OFF_MS))
-      break;
+    if (interrupt == RingInterrupt::NONE)
+      interrupt = ring_wait(RING_OFF_MS);
   }
   bell_off();
   DFPlayer.stop();
-  if (stop_requested) {
-    stop_requested = false;
+  if (interrupt == RingInterrupt::STOPPED) {
     Serial.println("Stopped by MQTT.");
     report("stopped");
     return false;
@@ -201,13 +241,44 @@ void run_ring_request() {
 }
 
 // ----------------------------------------------------------
-int parse_track(const String& text) {
-  if (text.length() == 0)
+int parse_track(const char* text, unsigned int length) {
+  if (length == 0)
     return -1;
-  for (unsigned int i = 0; i < text.length(); i++)
+  long value = 0;
+  for (unsigned int i = 0; i < length; i++) {
     if (!isDigit(text[i]))
       return -1;
-  return text.toInt();
+    long digit = text[i] - '0';
+    value = value > (LONG_MAX - digit) / 10 ? LONG_MAX : value * 10 + digit;
+  }
+  return value;
+}
+
+bool message_is(const char* text, unsigned int length, const char* expected) {
+  return length == strlen(expected) && memcmp(text, expected, length) == 0;
+}
+
+PendingCommand parse_command(const char* text, unsigned int length) {
+  PendingCommand parsed = NO_COMMAND;
+  if (length == 4 && strncasecmp(text, "stop", 4) == 0) {
+    parsed.command = Command::STOP;
+  } else if (length >= 5 && memcmp(text, "play:", 5) == 0) {
+    parsed.track = parse_track(text + 5, length - 5);
+    if (parsed.track >= 0)
+      parsed.command = Command::PLAY;
+  } else if (message_is(text, length, "bell:dc")) {
+    parsed.command = Command::BELL;
+    parsed.bell = BellMode::DC;
+  } else if (message_is(text, length, "bell:ac")) {
+    parsed.command = Command::BELL;
+    parsed.bell = BellMode::AC;
+  } else if (message_is(text, length, "x")) {
+    Serial.println("Not a valid payload for a code path. Skipping.");
+  } else {
+    parsed.command = Command::RING;
+    parsed.track = parse_track(text, length);
+  }
+  return parsed;
 }
 
 void mqtt_on_message_callback(char* topic, byte* payload, unsigned int length) {
@@ -215,43 +286,30 @@ void mqtt_on_message_callback(char* topic, byte* payload, unsigned int length) {
   Serial.print(topic);
   Serial.print("] length: ");
   Serial.println(length);
-  String message = "";
-  for (unsigned int i = 0; i < length; i++)
-    message += (char)payload[i];
-  message.trim();
-  Serial.println("Payload: " + message);
-  if (message.equalsIgnoreCase("stop")) {
-    stop_requested = true;
-    DFPlayer.stop();
-    return;
+  const char* text = (const char*)payload;
+  while (length > 0 && isspace(text[0])) {
+    text++;
+    length--;
   }
-  if (message.startsWith("play:")) {
-    int track = parse_track(message.substring(5));
-    if (track >= 0)
-      play_sound(track);
-    return;
-  }
-  if (message == "bell:dc" || message == "bell:ac") {
-    bell_test_request = message.substring(5);
-    return;
-  }
-  if (message == "x") {
-    Serial.println("Not a valid payload for a code path. Skipping.");
-    return;
-  }
-  requested_track = parse_track(message);
-  ring_requested = true;
+  while (length > 0 && isspace(text[length - 1]))
+    length--;
+  Serial.print("Payload: ");
+  Serial.write(text, length);
+  Serial.println();
+  pending_command = parse_command(text, length);
 }
 
 void run_bell_test() {
-  String mode = bell_test_request;
-  bell_test_request = "";
-  Serial.println("Bell test: " + mode);
-  report("bell_" + mode);
+  BellMode mode = bell_test_mode;
+  bell_test_mode = BellMode::NONE;
+  const char* mode_name = mode == BellMode::AC ? "ac" : "dc";
+  Serial.print("Bell test: ");
+  Serial.println(mode_name);
+  report(mode == BellMode::AC ? "bell_ac" : "bell_dc");
   unsigned long started = millis();
   bool polarity = false;
   while (millis() - started < BELL_TEST_MS) {
-    if (mode == "ac")
+    if (mode == BellMode::AC)
       polarity = !polarity;
     digitalWrite(RING_PIN_A, polarity ? HIGH : LOW);
     digitalWrite(RING_PIN_B, polarity ? LOW : HIGH);
@@ -293,10 +351,9 @@ void loop() {
   if (!mqttClient.connected())
     reconnect_mqtt();
   poll();
-  stop_requested = false;
   if (ring_requested)
     run_ring_request();
-  if (bell_test_request != "")
+  if (bell_test_mode != BellMode::NONE)
     run_bell_test();
   if (millis() - last_heartbeat > HEARTBEAT_MS)
     heartbeat();
