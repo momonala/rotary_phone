@@ -92,6 +92,7 @@ void update_led() {
   digitalWrite(STATUS_LED_PIN, hook_lifted != dial_click ? LOW : HIGH);
 }
 
+// One slot is enough: PubSubClient delivers at most one message per mqttClient.loop() call.
 PendingCommand consume_command() {
   PendingCommand taken = pending_command;
   pending_command = NO_COMMAND;
