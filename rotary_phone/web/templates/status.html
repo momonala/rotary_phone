@@ -114,11 +114,11 @@
       }
       const phone = data.phone;
       const health = phone.health;
-      const offline = phone.status === "offline";
+      const offline = phone.availability !== "online";
 
       const phoneRows = [
         ["Connection", phone.availability === null ? "Unknown" : offline ? "Offline" : "Online", offline],
-        ["Last report", `${duration(phone.health_age_s)} ago`, phone.status === "stale"],
+        ["Last report", `${duration(phone.health_age_s)} ago`, phone.report_stale],
       ];
       if (health) {
         const wifi = signal(health.wifi_rssi);

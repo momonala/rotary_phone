@@ -53,4 +53,19 @@ def test_snapshot_before_first_connect_is_broker_down(monkeypatch):
         "availability_age_s": None,
         "health": None,
         "health_age_s": None,
+        "report_stale": True,
     }
+
+
+@pytest.mark.parametrize(("seconds_since_report", "expected"), [(75, False), (76, True)])
+def test_snapshot_flags_a_stale_report_while_the_broker_is_down(monkeypatch, seconds_since_report, expected):
+    monkeypatch.setattr(phone_events.time, "time", lambda: NOW)
+    state = PhoneState()
+    state.availability, state.availability_at = "offline", NOW - 300
+    state.health, state.health_at = {}, NOW - seconds_since_report
+
+    snapshot = state.snapshot()
+
+    assert snapshot["status"] is DeviceStatus.BROKER_DOWN
+    assert snapshot["availability"] == "offline"
+    assert snapshot["report_stale"] is expected

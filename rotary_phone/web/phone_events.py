@@ -70,12 +70,16 @@ class DeviceStatus(StrEnum):
     BROKER_DOWN = "broker_down"
 
 
+def is_report_stale(health_age_s: int | None) -> bool:
+    return health_age_s is None or health_age_s > HEARTBEAT_STALE_S
+
+
 def device_status(availability: str | None, health_age_s: int | None, broker_connected: bool) -> DeviceStatus:
     if not broker_connected:
         return DeviceStatus.BROKER_DOWN
     if availability != "online":
         return DeviceStatus.OFFLINE
-    if health_age_s is None or health_age_s > HEARTBEAT_STALE_S:
+    if is_report_stale(health_age_s):
         return DeviceStatus.STALE
     return DeviceStatus.ONLINE
 
@@ -108,6 +112,7 @@ class PhoneState:
                 "availability_age_s": _age(self.availability_at, now),
                 "health": self.health,
                 "health_age_s": health_age_s,
+                "report_stale": is_report_stale(health_age_s),
             }
 
 
