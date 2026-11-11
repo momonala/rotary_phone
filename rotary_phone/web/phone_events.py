@@ -71,12 +71,12 @@ class DeviceStatus(StrEnum):
 
 
 def device_status(availability: str | None, health_age_s: int | None, broker_connected: bool) -> DeviceStatus:
+    if not broker_connected:
+        return DeviceStatus.BROKER_DOWN
     if availability != "online":
         return DeviceStatus.OFFLINE
     if health_age_s is None or health_age_s > HEARTBEAT_STALE_S:
         return DeviceStatus.STALE
-    if not broker_connected:
-        return DeviceStatus.BROKER_DOWN
     return DeviceStatus.ONLINE
 
 

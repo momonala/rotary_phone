@@ -15,8 +15,9 @@ NOW = 1_700_000_000.0
         ("online", 76, True, DeviceStatus.STALE),
         ("online", None, True, DeviceStatus.STALE),
         ("online", 75, False, DeviceStatus.BROKER_DOWN),
-        ("online", 76, False, DeviceStatus.STALE),
-        ("offline", None, False, DeviceStatus.OFFLINE),
+        ("online", 76, False, DeviceStatus.BROKER_DOWN),
+        ("offline", None, False, DeviceStatus.BROKER_DOWN),
+        ("offline", 10, True, DeviceStatus.OFFLINE),
     ],
 )
 def test_device_status(availability, health_age_s, broker_connected, expected):
@@ -40,11 +41,11 @@ def test_snapshot_judges_staleness_on_the_rounded_age(monkeypatch, seconds_since
     assert snapshot["availability_age_s"] == 300
 
 
-def test_snapshot_before_any_report_is_offline(monkeypatch):
+def test_snapshot_before_first_connect_is_broker_down(monkeypatch):
     monkeypatch.setattr(phone_events.time, "time", lambda: NOW)
     snapshot = PhoneState().snapshot()
     assert snapshot == {
-        "status": DeviceStatus.OFFLINE,
+        "status": DeviceStatus.BROKER_DOWN,
         "broker_connected": False,
         "availability": None,
         "availability_age_s": None,
